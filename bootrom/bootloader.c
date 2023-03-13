@@ -1,8 +1,15 @@
+
+
 #include <stddef.h>
 
+
 #define ED25519_NO_SEED 1
+
+
 #include "sha3/sha3.h"
 /* Adopted from https://github.com/orlp/ed25519
+#include "libsodium_solo_una_dir/crypto_pwhash.h"
+
   provides:
   - void ed25519_create_keypair(t_pubkey *public_key, t_privkey *private_key, t_seed *seed);
   - void ed25519_sign(t_signature *signature,
@@ -26,6 +33,31 @@
   provides memcpy, memset
 */
 
+#include "libsodium_solo_una_dir/sodium.h"
+
+
+
+/**
+ * 
+#include <openssl/evp.h>
+#include <openssl/kdf.h>
+#include <openssl/hmac.h>
+#include <openssl/params.h>
+*/
+
+//PATH file interni
+//home/valerio/keystone/qemu/roms/edk2/CryptoPkg/Library/OpensslLib/openssl/include/openssl/hmac.h
+/*
+#include <OpensslLib/openssl/include/openssl/hmac.h>
+#include <OpensslLib/openssl/include/openssl/kdf.h>
+#include <OpensslLib/openssl/include/openssl/evp.h>*/
+
+
+#define PASSWORD "correct horse battery staple"
+#define PASSWORD_LEN strlen(PASSWORD)
+#define SALT_SIZE crypto_pwhash_SALTBYTES
+#define HASH_SIZE crypto_pwhash_STRBYTES
+
 
 typedef unsigned char byte;
 
@@ -37,6 +69,8 @@ extern byte sanctum_sm_hash[64];
 extern byte sanctum_sm_public_key[32];
 extern byte sanctum_sm_secret_key[64];
 extern byte sanctum_sm_signature[64];
+
+extern byte device_root_key[64];
 #define DRAM_BASE 0x80000000
 
 /* Update this to generate valid entropy for target platform*/
@@ -50,7 +84,18 @@ void bootloader() {
   // Reserve stack space for secrets
   byte scratchpad[128];
   sha3_ctx_t hash_ctx;
+  /*
+  EVP_KDF *kdf;
+  EVP_KDF_CTX *kctx = NULL;
+  HMAC_CTX *hmac_ctx = NULL;
+  byte device_root_key[128];
+  byte comp_dev_id[128];
+  
+  byte comp_dev_id_v2[128];
+  unsigned int l_v2;
 
+  OSSL_PARAM params[5], *p = params;
+*/
   // TODO: on real device, copy boot image from memory. In simulator, HTIF writes boot image
   // ... SD card to beginning of memory.
   // sd_init();
@@ -75,9 +120,26 @@ void bootloader() {
   // TEST Device key
   #include "use_test_keys.h"
   
+   unsigned char salt[SALT_SIZE];
+   /*
+       if (crypto_pwhash_saltgen(salt, SALT_SIZE) != 0) {
+        // Error generating salt
+        return 1;
+    }*/
+    unsigned char hash[HASH_SIZE];
+    if (crypto_pwhash_str(
+            (char *) hash,             // Output buffer
+            PASSWORD, PASSWORD_LEN,   // Password and password length
+            crypto_pwhash_OPSLIMIT_MODERATE, // Moderate computational cost
+            crypto_pwhash_MEMLIMIT_MODERATE) // Moderate memory usage
+        != 0) {
+        // Error hashing password
+        return 1;
+    }
   // Derive {SK_D, PK_D} (device keys) from a 32 B random seed
   //ed25519_create_keypair(sanctum_dev_public_key, sanctum_dev_secret_key, scratchpad);
 
+  //hmac_ctx = HMAC_CTX_new();
   // Measure SM
   sha3_init(&hash_ctx, 64);
   sha3_update(&hash_ctx, (void*)DRAM_BASE, sanctum_sm_size);
