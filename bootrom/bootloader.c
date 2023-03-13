@@ -35,8 +35,6 @@
 
 #include "libsodium_solo_una_dir/sodium.h"
 
-
-
 /**
  * 
 #include <openssl/evp.h>
@@ -54,7 +52,7 @@
 
 
 #define PASSWORD "correct horse battery staple"
-#define PASSWORD_LEN strlen(PASSWORD)
+#define PASSWORD_LEN 28
 #define SALT_SIZE crypto_pwhash_SALTBYTES
 #define HASH_SIZE crypto_pwhash_STRBYTES
 
@@ -70,7 +68,17 @@ extern byte sanctum_sm_public_key[32];
 extern byte sanctum_sm_secret_key[64];
 extern byte sanctum_sm_signature[64];
 
-extern byte device_root_key[64];
+/*
+extern byte device_root_key_priv[64];
+extern byte device_root_key_pub[64];
+
+extern byte sign_sm[64];
+extern byte pub_key_manufacturer[64];
+
+extern byte compound_devide_identifier[64];
+
+extern byte sm_signature_drk[64];
+*/
 #define DRAM_BASE 0x80000000
 
 /* Update this to generate valid entropy for target platform*/
@@ -84,18 +92,23 @@ void bootloader() {
   // Reserve stack space for secrets
   byte scratchpad[128];
   sha3_ctx_t hash_ctx;
-  /*
-  EVP_KDF *kdf;
-  EVP_KDF_CTX *kctx = NULL;
-  HMAC_CTX *hmac_ctx = NULL;
-  byte device_root_key[128];
-  byte comp_dev_id[128];
-  
-  byte comp_dev_id_v2[128];
-  unsigned int l_v2;
 
-  OSSL_PARAM params[5], *p = params;
-*/
+  byte device_root_key_priv[64];
+  byte device_root_key_pub[64];
+
+  byte sign_sm[64];
+  byte pub_key_manufacturer[64];
+
+  byte compound_devide_identifier[64];
+
+  byte sm_signature_drk[64];
+
+  byte eca_key_priv[64];
+  byte eca_key_pub[64];
+  
+
+
+
   // TODO: on real device, copy boot image from memory. In simulator, HTIF writes boot image
   // ... SD card to beginning of memory.
   // sd_init();
@@ -120,30 +133,50 @@ void bootloader() {
   // TEST Device key
   #include "use_test_keys.h"
   
-   unsigned char salt[SALT_SIZE];
-   /*
-       if (crypto_pwhash_saltgen(salt, SALT_SIZE) != 0) {
-        // Error generating salt
-        return 1;
-    }*/
-    unsigned char hash[HASH_SIZE];
-    if (crypto_pwhash_str(
-            (char *) hash,             // Output buffer
-            PASSWORD, PASSWORD_LEN,   // Password and password length
-            crypto_pwhash_OPSLIMIT_MODERATE, // Moderate computational cost
-            crypto_pwhash_MEMLIMIT_MODERATE) // Moderate memory usage
-        != 0) {
-        // Error hashing password
-        return 1;
-    }
-  // Derive {SK_D, PK_D} (device keys) from a 32 B random seed
-  //ed25519_create_keypair(sanctum_dev_public_key, sanctum_dev_secret_key, scratchpad);
+  // From the unique device identifier, a keypair is created, the device root key
+  ed25519_create_keypair(device_root_key_pub, device_root_key_priv, sanctum_dev_secret_key);
 
-  //hmac_ctx = HMAC_CTX_new();
+
+  // Loading of the manufacturer public key and of the digital signature of the security monitor
+  
+
+
   // Measure SM
   sha3_init(&hash_ctx, 64);
   sha3_update(&hash_ctx, (void*)DRAM_BASE, sanctum_sm_size);
   sha3_final(sanctum_sm_hash, &hash_ctx);
+
+  //Verify the signature of the security monitor provided by the manufacturer
+  if(ed25519_verify(sign_sm, (void*)DRAM_BASE, sanctum_sm_size ,pub_key_manufacturer)){
+    
+    // All ok
+
+    // Combine hash of the security monitor and the device root key to obtain the CDI
+    sha3_init(&hash_ctx, 64);
+    sha3_update(&hash_ctx, device_root_key_priv, sizeof(*device_root_key_priv));
+    sha3_update(&hash_ctx, sanctum_sm_hash, sizeof(*sanctum_sm_hash));
+    sha3_final(compound_devide_identifier, &hash_ctx);
+
+    // Using the CDI a new keypair is derived for the attestation 
+
+
+    // The measure of the sm is signed with the device root key
+    ed25519_sign(sm_signature_drk, sanctum_sm_hash, sizeof(*sanctum_sm_hash), device_root_key_pub, device_root_key_priv);
+
+    // Generating the key associated to the embedded CA
+    ed25519_create_keypair(eca_key_pub, eca_key_priv, device_root_key_priv);
+
+
+
+  }
+  else{
+    // The security monitor cannot be verified -> exit
+  }
+
+
+  // Derive {SK_D, PK_D} (device keys) from a 32 B random seed
+  //ed25519_create_keypair(sanctum_dev_public_key, sanctum_dev_secret_key, scratchpad);
+
 
   // Combine SK_D and H_SM via a hash
   // sm_key_seed <-- H(SK_D, H_SM), truncate to 32B
@@ -164,6 +197,14 @@ void bootloader() {
   // Erase SK_D
   memset((void*)sanctum_dev_secret_key, 0, sizeof(*sanctum_dev_secret_key));
 
-  // caller will clean core state and memory (including the stack), and boot.
+  // Erase DRK_priv
+  memset((void*)device_root_key_priv, 0, sizeof(*device_root_key_priv));
+
+  // Erase CDI
+  memset((void*)compound_devide_identifier, 0, sizeof(*compound_devide_identifier));
+
+  // Erase eca_key_priv
+  memset((void*)eca_key_priv, 0, sizeof(*eca_key_priv));
+
   return;
 }

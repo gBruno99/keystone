@@ -89,7 +89,7 @@ set(cross_compile riscv${BITS}-unknown-linux-gnu-)
 
 set(bootrom_srcdir ${CMAKE_SOURCE_DIR}/bootrom)
 
-set(libsodium_srcdir ${CMAKE_SOURCE_DIR}/bootrom/libsodium-client/src/)
+#set(libsodium_srcdir ${CMAKE_SOURCE_DIR}/bootrom/libsodium-client/src/)
 
 set(bootrom_wrkdir ${CMAKE_BINARY_DIR}/bootrom.build)
 set(qemu_wrkdir ${CMAKE_SOURCE_DIR}/qemu/build)
@@ -200,7 +200,7 @@ add_custom_command(DEPENDS ${buildroot_config} OUTPUT ${buildroot_wrkdir}/.confi
 ## component: bootrom
 ###############################################################################
 
-set(libsodium /home/valerio/keystone/bootrom/libsodium-client)
+#set(libsodium /home/valerio/keystone/bootrom/libsodium-client)
 
 #TARGET_LINK_LIBRARIES("bootrom" ${OPENSSL_SSL_LIBRARY} ssl)
 #TARGET_LINK_LIBRARIES("bootrom" ${OPENSSL_CRYPTO_LIBRARY} crypto)
@@ -217,7 +217,7 @@ set(libsodium /home/valerio/keystone/bootrom/libsodium-client)
 #set_target_properties(sodium_lib PROPERTIES LINKER_LANGUAGE C)
 #set_target_properties(lib_test PROPERTIES IMPORTED_LOCATION ${LIBSODIUM_CLIENT_DIR}/.libs/libsodium.a)
 #include_directories("/home/valerio/Scrivania/libsodium-client/src/libsodium/include")
-include_directories(${libsodium}/src/libsodium/include)
+#include_directories(${libsodium}/src/libsodium/include)
 #target_include_directories(lib_test INTERFACE "/home/valerio/Scrivania/libsodium-client/src/libsodium/include")
 
 #add_library (staticLibA STATIC ${LIBSODIUM_CLIENT_DIR}/.libs/libsodium.a)
@@ -231,7 +231,7 @@ include_directories(${libsodium}/src/libsodium/include)
 add_custom_command(OUTPUT ${bootrom_wrkdir} COMMAND mkdir -p ${bootrom_wrkdir})
 add_custom_target("bootrom-sync" DEPENDS  ${bootrom_srcdir} ${bootrom_wrkdir}  #se aggiungo lib_test, modifica il build associato
   COMMAND rsync -r ${bootrom_srcdir}/ ${bootrom_wrkdir})
-add_custom_target("bootrom" ALL DEPENDS  ${bootrom_wrkdir} ${bootrom_srcdir} "bootrom-sync" #${libsodium_srcdir} 
+add_custom_target("bootrom" ALL DEPENDS  ${bootrom_wrkdir} ${bootrom_srcdir} "bootrom-sync" 
   COMMAND $(MAKE) -C ${bootrom_wrkdir} O=${bootrom_wrkdir} march=${ISA} mabi=${ABI} CC=riscv${BITS}-unknown-elf-gcc
     OBJCOPY=riscv${BITS}-unknown-elf-objcopy
   COMMENT "Building bootrom"

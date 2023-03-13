@@ -48,8 +48,7 @@ bootrom_sources = \
 	./bootloader.S \
 	./bootloader.c \
 	./ed25519/*.c \
-	./sha3/*.c \
-	./libsodium_solo_una_dir/*.c #\
+	./sha3/*.c #\
 	./openssl/crypto/evp/kdf_meth.c \
 	./openssl/crypto/evp/kdf_lib.c \
 	./openssl/crypto/params.c \
@@ -72,7 +71,7 @@ bootrom_sources = \
 	#-I./libsodium-client/src/libsodium/include
 
 %.elf: $(bootrom_sources) bootloader.lds
-	$(CC) $(CFLAGS) -I./  -L./ -T bootloader.lds -o $@ $(bootrom_sources) 
+	$(CC) $(CFLAGS) -I./  -L . -T bootloader.lds -o $@ $(bootrom_sources) 
 
 %.bin: %.elf
 	$(OBJCOPY) -O binary --only-section=.text $< $@;
