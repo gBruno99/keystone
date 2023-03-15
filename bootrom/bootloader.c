@@ -33,28 +33,6 @@
   provides memcpy, memset
 */
 
-#include "libsodium_solo_una_dir/sodium.h"
-
-/**
- * 
-#include <openssl/evp.h>
-#include <openssl/kdf.h>
-#include <openssl/hmac.h>
-#include <openssl/params.h>
-*/
-
-//PATH file interni
-//home/valerio/keystone/qemu/roms/edk2/CryptoPkg/Library/OpensslLib/openssl/include/openssl/hmac.h
-/*
-#include <OpensslLib/openssl/include/openssl/hmac.h>
-#include <OpensslLib/openssl/include/openssl/kdf.h>
-#include <OpensslLib/openssl/include/openssl/evp.h>*/
-
-
-#define PASSWORD "correct horse battery staple"
-#define PASSWORD_LEN 28
-#define SALT_SIZE crypto_pwhash_SALTBYTES
-#define HASH_SIZE crypto_pwhash_STRBYTES
 
 
 typedef unsigned char byte;
@@ -68,16 +46,18 @@ extern byte sanctum_sm_public_key[32];
 extern byte sanctum_sm_secret_key[64];
 extern byte sanctum_sm_signature[64];
 
+
 /*
 extern byte device_root_key_priv[64];
-extern byte device_root_key_pub[64];
-
 extern byte sign_sm[64];
 extern byte pub_key_manufacturer[64];
 
-extern byte compound_devide_identifier[64];
 
-extern byte sm_signature_drk[64];
+//To be defined extern, they are needed by the sm
+extern byte sanctum_compound_devide_identifier[64];
+extern byte sanctum_eca_key_pub[32];
+extern byte sanctum_sm_signature_drk[64];
+extern byte sanctum_device_root_key_pub[64];
 */
 #define DRAM_BASE 0x80000000
 
@@ -91,23 +71,24 @@ void bootloader() {
 	//*sanctum_sm_size = 0x200;
   // Reserve stack space for secrets
   byte scratchpad[128];
+  byte scratchpad_app[128];
   sha3_ctx_t hash_ctx;
 
-  byte device_root_key_priv[64];
-  byte device_root_key_pub[64];
+  byte sanctum_device_root_key_priv[64];
+  byte sanctum_device_root_key_pub[32];
 
-  byte sign_sm[64];
-  byte pub_key_manufacturer[64];
+  byte sanctum_sm_sign[64]; //no usefull if there is a file with the sign of the security monitor
+  byte sanctum_pub_key_manufacturer[64]; //no usefull if there is a file with the pub key of the manufacturer
 
-  byte compound_devide_identifier[64];
+  byte sanctum_compound_devide_identifier[64];
 
-  byte sm_signature_drk[64];
+  byte sanctum_sm_signature_drk[64];
 
-  byte eca_key_priv[64];
-  byte eca_key_pub[64];
+  byte sanctum_eca_key_priv[64];
+  byte sanctum_eca_key_pub[32];
+
+  byte sanctum_sm_signature_test[64];
   
-
-
 
   // TODO: on real device, copy boot image from memory. In simulator, HTIF writes boot image
   // ... SD card to beginning of memory.
@@ -131,48 +112,66 @@ void bootloader() {
      keystore. For testing purposes we hardcode a known private/public
      keypair */
   // TEST Device key
+
   #include "use_test_keys.h"
   
   // From the unique device identifier, a keypair is created, the device root key
-  ed25519_create_keypair(device_root_key_pub, device_root_key_priv, sanctum_dev_secret_key);
-
+  ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv, sanctum_dev_secret_key);
 
   // Loading of the manufacturer public key and of the digital signature of the security monitor
-  
 
+  //#include #"use_sm_sign_and_pk_man.h"  
+  #include "sm_sign_and_pk_man.h"
 
-  // Measure SM
+  // All this part is not needed in the real case, both the singature and the public key is provided
+  //---------------------------------------------------------------------------------------------------
+  byte private_key_test[64];
+  byte public_key_test[32];
+  byte seed_test[]= {0x00};
+  // For testing, create a keypair to simulate that we have already the public key of the manufacturer
+  ed25519_create_keypair(public_key_test, private_key_test, seed_test);
+
+  // Measure for the first time the SM to simulate that the signature is provided by the manufacturer
+  sha3_init(&hash_ctx, 64);
+  sha3_update(&hash_ctx, (void*)DRAM_BASE, sanctum_sm_size);
+  sha3_final(sanctum_sm_hash, &hash_ctx);
+  ed25519_sign(sanctum_sm_signature_test, sanctum_sm_hash, 64, public_key_test, private_key_test);
+  //--------------------------------------------------------------------------------------------------
+
+  // Measure SM to verify the signature
   sha3_init(&hash_ctx, 64);
   sha3_update(&hash_ctx, (void*)DRAM_BASE, sanctum_sm_size);
   sha3_final(sanctum_sm_hash, &hash_ctx);
 
+  // If the signature is modified, the verification goes wrong
+  sanctum_sm_signature_test[0] = random_byte(0);
+
   //Verify the signature of the security monitor provided by the manufacturer
-  if(ed25519_verify(sign_sm, (void*)DRAM_BASE, sanctum_sm_size ,pub_key_manufacturer)){
-    
-    // All ok
-
-    // Combine hash of the security monitor and the device root key to obtain the CDI
-    sha3_init(&hash_ctx, 64);
-    sha3_update(&hash_ctx, device_root_key_priv, sizeof(*device_root_key_priv));
-    sha3_update(&hash_ctx, sanctum_sm_hash, sizeof(*sanctum_sm_hash));
-    sha3_final(compound_devide_identifier, &hash_ctx);
-
-    // Using the CDI a new keypair is derived for the attestation 
-
-
-    // The measure of the sm is signed with the device root key
-    ed25519_sign(sm_signature_drk, sanctum_sm_hash, sizeof(*sanctum_sm_hash), device_root_key_pub, device_root_key_priv);
-
-    // Generating the key associated to the embedded CA
-    ed25519_create_keypair(eca_key_pub, eca_key_priv, device_root_key_priv);
-
-
-
-  }
-  else{
-    // The security monitor cannot be verified -> exit
+  if((ed25519_verify(sanctum_sm_signature_test, sanctum_sm_hash, 64, public_key_test)) == 0){
+    while(1);
   }
 
+  // All ok
+  // Combine hash of the security monitor and the device root key to obtain the CDI
+  sha3_init(&hash_ctx, 64);
+  sha3_update(&hash_ctx, sanctum_device_root_key_priv, sizeof(*sanctum_device_root_key_priv));
+  sha3_update(&hash_ctx, sanctum_sm_hash, sizeof(*sanctum_sm_hash));
+  sha3_final(sanctum_compound_devide_identifier, &hash_ctx);
+
+  // The measure of the sm is signed with the device root key
+  ed25519_sign(sanctum_sm_signature_drk, sanctum_sm_hash, sizeof(*sanctum_sm_hash), sanctum_device_root_key_pub, sanctum_device_root_key_priv);
+
+  // Generating the key associated to the embedded CA
+  ed25519_create_keypair(sanctum_eca_key_pub, sanctum_eca_key_priv, sanctum_device_root_key_priv);
+
+  // Erase DRK_priv
+  memset((void*)sanctum_device_root_key_priv, 0, sizeof(*sanctum_device_root_key_priv));
+
+  // Erase CDI
+  memset((void*)sanctum_compound_devide_identifier, 0, sizeof(*sanctum_compound_devide_identifier));
+
+  // Erase eca_key_priv
+  memset((void*)sanctum_eca_key_priv, 0, sizeof(*sanctum_eca_key_priv));
 
   // Derive {SK_D, PK_D} (device keys) from a 32 B random seed
   //ed25519_create_keypair(sanctum_dev_public_key, sanctum_dev_secret_key, scratchpad);
@@ -190,21 +189,16 @@ void bootloader() {
   // Endorse the SM
   memcpy(scratchpad, sanctum_sm_hash, 64);
   memcpy(scratchpad + 64, sanctum_sm_public_key, 32);
+
+  memcpy(scratchpad_app, sanctum_sm_hash, 64);
+
   // Sign (H_SM, PK_SM) with SK_D
   ed25519_sign(sanctum_sm_signature, scratchpad, 64 + 32, sanctum_dev_public_key, sanctum_dev_secret_key);
+
 
   // Clean up
   // Erase SK_D
   memset((void*)sanctum_dev_secret_key, 0, sizeof(*sanctum_dev_secret_key));
-
-  // Erase DRK_priv
-  memset((void*)device_root_key_priv, 0, sizeof(*device_root_key_priv));
-
-  // Erase CDI
-  memset((void*)compound_devide_identifier, 0, sizeof(*compound_devide_identifier));
-
-  // Erase eca_key_priv
-  memset((void*)eca_key_priv, 0, sizeof(*eca_key_priv));
 
   return;
 }

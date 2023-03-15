@@ -24,12 +24,19 @@ extern byte sanctum_sm_signature[SIGNATURE_SIZE];
 extern byte sanctum_sm_secret_key[PRIVATE_KEY_SIZE];
 extern byte sanctum_sm_public_key[PUBLIC_KEY_SIZE];
 extern byte sanctum_dev_public_key[PUBLIC_KEY_SIZE];
-
 byte sm_hash[MDSIZE] = { 0, };
 byte sm_signature[SIGNATURE_SIZE] = { 0, };
 byte sm_public_key[PUBLIC_KEY_SIZE] = { 0, };
 byte sm_private_key[PRIVATE_KEY_SIZE] = { 0, };
 byte dev_public_key[PUBLIC_KEY_SIZE] = { 0, };
+
+
+extern byte sanctum_eca_key_pub[PUBLIC_KEY_SIZE];
+extern byte sanctum_sm_signature_drk[SIGNATURE_SIZE];
+extern byte sanctum_device_root_key_pub[PUBLIC_KEY_SIZE];
+byte eca_key_pub[PUBLIC_KEY_SIZE] = {0, };
+byte sm_signature_drk[SIGNATURE_SIZE] = {0, };
+byte device_root_key_pub[PUBLIC_KEY_SIZE] = {0, };
 
 int osm_pmp_set(uint8_t perm)
 {
@@ -91,6 +98,7 @@ void sm_copy_key()
 
 void sm_print_hash()
 {
+  sbi_printf("SM HASH\n-------------------------------------------------\n");
   for (int i=0; i<MDSIZE; i++)
   {
     sbi_printf("%02x", (char) sm_hash[i]);
@@ -154,6 +162,8 @@ void sm_init(bool cold_boot)
 
     // Init the enclave metadata
     enclave_init_metadata();
+
+    //sm_print_hash();
 
     sm_init_done = 1;
     mb();
