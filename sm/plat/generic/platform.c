@@ -167,7 +167,7 @@ static int generic_final_init(bool cold_boot)
 		if (rc)
 			return rc;
 	}
-
+	
 	return 0;
 }
 

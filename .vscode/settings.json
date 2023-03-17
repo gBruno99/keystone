@@ -4,6 +4,10 @@
         "stddef.h": "c",
         "string.h": "c",
         "stdint.h": "c",
-        "utils.h": "c"
+        "utils.h": "c",
+        "platform.h": "c",
+        "kexec.h": "c",
+        "atomic.h": "c",
+        "reboot.h": "c"
     }
 }

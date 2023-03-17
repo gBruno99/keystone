@@ -47,6 +47,10 @@ extern byte sanctum_sm_secret_key[64];
 extern byte sanctum_sm_signature[64];
 
 
+/**
+ * called (?) by bootloader.S at line 27 (secure boot)
+*/
+
 /*
 extern byte device_root_key_priv[64];
 extern byte sign_sm[64];
@@ -66,7 +70,6 @@ inline byte random_byte(unsigned int i) {
 #warning Bootloader does not have entropy source, keys are for TESTING ONLY
   return 0xac + (0xdd ^ i);
 }
-
 void bootloader() {
 	//*sanctum_sm_size = 0x200;
   // Reserve stack space for secrets
@@ -125,6 +128,7 @@ void bootloader() {
 
   // All this part is not needed in the real case, both the singature and the public key is provided
   //---------------------------------------------------------------------------------------------------
+  
   byte private_key_test[64];
   byte public_key_test[32];
   byte seed_test[]= {0x00};
@@ -136,6 +140,7 @@ void bootloader() {
   sha3_update(&hash_ctx, (void*)DRAM_BASE, sanctum_sm_size);
   sha3_final(sanctum_sm_hash, &hash_ctx);
   ed25519_sign(sanctum_sm_signature_test, sanctum_sm_hash, 64, public_key_test, private_key_test);
+  
   //--------------------------------------------------------------------------------------------------
 
   // Measure SM to verify the signature
@@ -147,8 +152,11 @@ void bootloader() {
   sanctum_sm_signature_test[0] = random_byte(0);
 
   //Verify the signature of the security monitor provided by the manufacturer
+  
   if((ed25519_verify(sanctum_sm_signature_test, sanctum_sm_hash, 64, public_key_test)) == 0){
-    while(1);
+    //kernel_power_off();
+    //while(1);
+    return 0;
   }
 
   // All ok
@@ -200,5 +208,5 @@ void bootloader() {
   // Erase SK_D
   memset((void*)sanctum_dev_secret_key, 0, sizeof(*sanctum_dev_secret_key));
 
-  return;
+  return 1; //it SHOULD be put in a0 register
 }
