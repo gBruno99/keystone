@@ -1,8 +1,26 @@
+
+#ifndef __STRING_H__
+#define __STRING_H__
+
+#include <stdint.h>
+#include <stddef.h>
+unsigned int strlen(const char *s);
+int strncmp( const char * s1, const char * s2, size_t n );
+char* strncpy(char* destination, const char* source, size_t num);
+void * memmove(void* dest, const void* src, unsigned int n);
+int memcmp (const void *str1, const void *str2, size_t count);
+void* memset(void* dest, int byte, size_t len);
+void* memcpy(void* dest, const void* src, size_t len);
+
+#endif
+
+/*
 #ifndef __STRING_H__
 #define __STRING_H__
 
 
 #include <stddef.h>
+#include <stdint.h>
 
 void* memcpy(void* dest, const void* src, size_t len)
 {
@@ -43,3 +61,4 @@ void* memset(void* dest, int byte, size_t len)
 }
 
 #endif
+*/

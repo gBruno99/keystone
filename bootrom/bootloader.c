@@ -33,7 +33,7 @@
   provides memcpy, memset
 */
 
-
+#include "x509custom/x509custom.h"
 
 typedef unsigned char byte;
 
@@ -73,6 +73,30 @@ inline byte random_byte(unsigned int i) {
 void bootloader() {
 	//*sanctum_sm_size = 0x200;
   // Reserve stack space for secrets
+  /*
+  mbedtls_x509write_cert cert;
+  mbedtls_x509write_crt_init(&cert);
+  
+  int ret;
+  char error_buf[100];
+
+  ret = mbedtls_x509write_crt_set_subject_name(&cert, "CN=test.com,O=Test Organization,L=Italy,C=IT");
+  if( ret != 0 )
+  {
+    //mbedtls_strerror( ret, error_buf, 100 );
+    //printf( "Errore1: %s\n", error_buf );
+
+  }
+  ret = mbedtls_x509write_crt_set_issuer_name(&cert, "CN=example.com,O=Example Organization,L=San Francisco,C=US");
+  if( ret != 0 )
+  {
+    //mbedtls_strerror( ret, error_buf, 100 );
+    //printf( "Errore2: %s\n", error_buf );
+        return 0;
+
+  }
+  */
+
   byte scratchpad[128];
   byte scratchpad_app[128];
   sha3_ctx_t hash_ctx;

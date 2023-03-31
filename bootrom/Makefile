@@ -9,6 +9,7 @@ CFLAGS += \
 	-static \
 	-fPIC \
 	-O2 -Wall#\
+	-I/home/valerio/keystone/bootrom/mbed_tls_keystone#\
 	-I/home/valerio/Scrivania/libsodium-client/src/libsodium/include \
 	-I/home/valerio/Scrivania/libsodium-client/src/libsodium/include/sodium #\
 	-I/home/valerio/keystone/bootrom/openssl/include#\
@@ -48,7 +49,11 @@ bootrom_sources = \
 	./bootloader.S \
 	./bootloader.c \
 	./ed25519/*.c \
-	./sha3/*.c #\
+	./sha3/*.c \
+	./x509custom/*.c\
+	./string.c#\
+	./mbed_tls_keystone/*.c#\
+	./mbed_tls_keystone/crypto_*.c#\
 	./openssl/crypto/evp/kdf_meth.c \
 	./openssl/crypto/evp/kdf_lib.c \
 	./openssl/crypto/params.c \

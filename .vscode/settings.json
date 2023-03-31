@@ -8,6 +8,7 @@
         "platform.h": "c",
         "kexec.h": "c",
         "atomic.h": "c",
-        "reboot.h": "c"
+        "reboot.h": "c",
+        "x509_custom.h": "c"
     }
 }
