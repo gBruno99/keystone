@@ -66,7 +66,7 @@ void bootloader()
 {
 
   byte scratchpad[128];
-  byte scratchpad_app[128];
+  //byte scratchpad_app[128];
   sha3_ctx_t hash_ctx;
 
   byte sanctum_device_root_key_priv[64];
@@ -163,10 +163,10 @@ void bootloader()
   sha3_init(&hash_ctx, 64);
   sha3_update(&hash_ctx, sanctum_device_root_key_priv, sizeof(*sanctum_device_root_key_priv));
   sha3_update(&hash_ctx, sanctum_sm_hash, sizeof(*sanctum_sm_hash));
-  sha3_final(sanctum_compound_devide_identifier, &hash_ctx);
+  sha3_final(sanctum_CDI, &hash_ctx);
 
   // The CDI is used to generate the keypair associated to the security monitor
-  ed25519_create_keypair(sanctum_compound_devide_identifier, sanctum_sm_key_priv, sanctum_sm_key_pub);
+  ed25519_create_keypair(sanctum_CDI, sanctum_sm_key_priv, sanctum_sm_key_pub);
 
   // The measure of the sm is signed with the device root key
   ed25519_sign(sanctum_sm_signature_drk, sanctum_sm_hash, sizeof(*sanctum_sm_hash), sanctum_device_root_key_pub, sanctum_device_root_key_priv);
@@ -268,11 +268,11 @@ void bootloader()
     return 0;
   }
   */
-  //byte scratchpad_app[196+effe_len_cert_der];
-  memcpy(scratchpad_app, sanctum_sm_hash, 64);
-  memcpy(sanctum_CDI, sanctum_compound_devide_identifier, 64);
-  memcpy(sanctum_ECA_pk, sanctum_eca_key_pub, 64);
-  memcpy(sanctum_cert_sm, cert_real, effe_len_cert_der );
+  byte scratchpad_app[196+effe_len_cert_der];
+  //memcpy(scratchpad_app, sanctum_sm_hash, 64);
+  memcpy(scratchpad_app, sanctum_CDI, 64);
+  memcpy(scratchpad_app, sanctum_eca_key_pub, 64);
+  memcpy(scratchpad_app, cert_real, effe_len_cert_der );
   sanctum_length_cert = effe_len_cert_der;
 
 

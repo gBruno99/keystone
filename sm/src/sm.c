@@ -38,21 +38,11 @@ extern byte sanctum_CDI[64];
 extern byte sanctum_ECA_pk[64];
 extern byte sanctum_sm_hash_to_check[64];
 extern int sanctum_length_cert;
-
-byte cert_sm[512];
-byte CDI[64];
-byte ECA_pk[64];
-byte sm_hash_to_check[64];
-int length_cert;
-
-
-
-extern byte sanctum_eca_key_pub[PUBLIC_KEY_SIZE];
-extern byte sanctum_sm_signature_drk[SIGNATURE_SIZE];
-extern byte sanctum_device_root_key_pub[PUBLIC_KEY_SIZE];
-byte eca_key_pub[PUBLIC_KEY_SIZE] = {0, };
-byte sm_signature_drk[SIGNATURE_SIZE] = {0, };
-byte device_root_key_pub[PUBLIC_KEY_SIZE] = {0, };
+byte cert_sm[512] = { 0, };
+byte CDI[64] = { 0, };
+byte ECA_pk[64] = { 0, };
+byte sm_hash_to_check[64] = { 0, };
+int length_cert = 0;
 
 int osm_pmp_set(uint8_t perm)
 {
@@ -113,9 +103,9 @@ void sm_copy_key()
 
   sbi_memcpy(cert_sm, sanctum_cert_sm, 64);
   sbi_memcpy(CDI, sanctum_CDI, 64);
-  sbi_memcpy(ECA_pk, sanctum_ECA_pkI, 64);
+  sbi_memcpy(ECA_pk, sanctum_ECA_pk, 64);
   sbi_memcpy(sm_hash_to_check, sanctum_sm_hash_to_check, 64);
-  sbi_memcpy(length_cert,sanctum_length_cert, 4)
+  sbi_memcpy(&length_cert, &sanctum_length_cert, 4);
   /*
   if ((ret = mbedtls_x509_crt_parse_der(&uff_cert, cert_real, effe_len_cert_der)) == 0){
         printf("Parsing corretto\n");

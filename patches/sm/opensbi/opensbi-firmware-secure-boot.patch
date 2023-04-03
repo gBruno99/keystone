@@ -42,3 +42,23 @@ index 0ac75f2..9aa9c1a 100644
 +  /* 64 Bytes : security monitor's signature by device */
 +  PROVIDE( sanctum_sm_signature = . );
 +  . += 0x40;
++
++	/* 64 Bytes : CDI */
++	PROVIDE( sanctum_CDI = . );
++	. += 0x40;
++
++	/* 64 Bytes : ECA_pk */
++	PROVIDE( sanctum_ECA_pk = . );
++	. += 0x40;
++
++	/* 64 Bytes : hash of sm */
++	PROVIDE( sanctum_sm_hash_to_check = . );
++	. += 0x40;
++
++	/* 4 Bytes : sanctum_length_cert */
++	PROVIDE( sanctum_length_cert = . );
++	. += 0x04;
++
++	/* 512 Bytes : length of the cert created*/
++	PROVIDE( sanctum_cert_sm = . );
++	. += 0x200;

@@ -132,7 +132,7 @@ typedef __uint8_t uint8_t;
         (g) += ret;                                 \
     } while (0);
 
-static inline int mbedtls_error_add(int high, int low,
+inline int mbedtls_error_add(int high, int low,
                                     const char *file, int line)
 {
   /*
@@ -500,7 +500,7 @@ typedef struct {
 
 
 
-static const x509_attr_descriptor_t x509_attrs[] =
+const x509_attr_descriptor_t x509_attrs[] =
 {
     { ADD_STRLEN("CN"),
       MBEDTLS_OID_AT_CN, MBEDTLS_ASN1_UTF8_STRING },
@@ -568,20 +568,20 @@ int mbedtls_pk_parse_public_key(mbedtls_pk_context *ctx,  const unsigned char *k
 void mbedtls_x509write_crt_set_subject_key(mbedtls_x509write_cert *ctx, mbedtls_pk_context *key);
 int mbedtls_x509write_crt_set_validity(mbedtls_x509write_cert *ctx, const char *not_before, const char *not_after);  
 void mbedtls_pk_init(mbedtls_pk_context *ctx);     
-static size_t ed25519_get_bitlen(const void *ctx);
-static int ed25519_can_do(mbedtls_pk_type_t type);
+size_t ed25519_get_bitlen(const void *ctx);
+int ed25519_can_do(mbedtls_pk_type_t type);
 /*void*/ mbedtls_ed25519_context ed25519_alloc_wrap(void);
-static void ed25519_free_wrap(void *ctx);
+void ed25519_free_wrap(void *ctx);
 int mbedtls_ed25519_check_pub_priv(unsigned char* priv, unsigned char* pub, unsigned char* seed);
-static int ed25519_check_pair_wrap(const void *pub, const void *prv, int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
-static int ed25519_encrypt_wrap(void *ctx,
+int ed25519_check_pair_wrap(const void *pub, const void *prv, int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
+int ed25519_encrypt_wrap(void *ctx,
                             const unsigned char *input, size_t ilen,
                             unsigned char *output, size_t *olen, size_t osize,
                             int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
-static int ed25519_decrypt_wrap(void *ctx, const unsigned char *input, size_t ilen,unsigned char *output, size_t *olen, size_t osize, int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
+int ed25519_decrypt_wrap(void *ctx, const unsigned char *input, size_t ilen,unsigned char *output, size_t *olen, size_t osize, int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
 int mbedtls_x509_string_to_names(mbedtls_asn1_named_data **head, const char *name);
 //void mbedtls_asn1_free_named_data_list(mbedtls_asn1_named_data **head);
-static const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name, size_t name_len);
+const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name, size_t name_len);
 mbedtls_asn1_named_data *mbedtls_asn1_store_named_data( mbedtls_asn1_named_data **head,const char *oid, size_t oid_len,const unsigned char *val,size_t val_len);
 mbedtls_asn1_named_data *asn1_find_named_data(mbedtls_asn1_named_data *list,const char *oid, size_t len);
 void mbedtls_x509write_crt_set_issuer_key(mbedtls_x509write_cert *ctx, mbedtls_pk_context *key);
@@ -643,7 +643,7 @@ int mbedtls_x509_crt_parse_der(mbedtls_x509_crt *chain, const unsigned char *buf
 int mbedtls_x509_crt_parse_der_internal(mbedtls_x509_crt *chain, const unsigned char *buf, size_t buflen, int make_copy,
                                                mbedtls_x509_crt_ext_cb_t cb, void *p_ctx);
 void mbedtls_x509_crt_init(mbedtls_x509_crt *crt);
-static int x509_crt_parse_der_core(mbedtls_x509_crt *crt, const unsigned char *buf,size_t buflen, int make_copy, mbedtls_x509_crt_ext_cb_t cb, void *p_ctx);
+int x509_crt_parse_der_core(mbedtls_x509_crt *crt, const unsigned char *buf,size_t buflen, int make_copy, mbedtls_x509_crt_ext_cb_t cb, void *p_ctx);
 int mbedtls_asn1_get_tag(unsigned char **p,
                          const unsigned char *end,
                          size_t *len, int tag);
@@ -678,7 +678,7 @@ int mbedtls_asn1_write_bool(unsigned char **p, const unsigned char *start, int b
 int mbedtls_x509_set_extension(mbedtls_asn1_named_data *head, const char *oid, size_t oid_len,
                                int critical, const unsigned char *val, size_t val_len, int *ne);
 int mbedtls_x509write_crt_set_extension(mbedtls_x509write_cert *ctx,  const char *oid, size_t oid_len, int critical, const unsigned char *val, size_t val_len);
-static int x509_get_uid(unsigned char **p, const unsigned char *end,mbedtls_x509_buf *uid, int n);
+int x509_get_uid(unsigned char **p, const unsigned char *end,mbedtls_x509_buf *uid, int n);
 int pk_get_pk_alg(unsigned char **p,
                          const unsigned char *end,
                          mbedtls_pk_type_t *pk_alg, mbedtls_asn1_buf *params);

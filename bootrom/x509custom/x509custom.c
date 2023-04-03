@@ -1,6 +1,7 @@
 //#include "string.h"
 #include "string.h"
 #include "x509custom.h"
+#include "ed25519/ed25519.h"
 
 
 //////////////////////////////////////////////////////////////////////

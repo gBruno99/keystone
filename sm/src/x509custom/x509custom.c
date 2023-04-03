@@ -7,7 +7,7 @@
 // strcmp riga 114
 // memcpy riga 150, 183
 
-static inline mbedtls_ed25519_context *mbedtls_pk_ed25519(const mbedtls_pk_context pk)
+inline mbedtls_ed25519_context *mbedtls_pk_ed25519(const mbedtls_pk_context pk)
 {
     switch (mbedtls_pk_get_type(&pk)) {
         case MBEDTLS_PK_ED25519:
@@ -17,7 +17,7 @@ static inline mbedtls_ed25519_context *mbedtls_pk_ed25519(const mbedtls_pk_conte
     }
 }
 
-static const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name, size_t name_len)
+const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name, size_t name_len)
 {
     const x509_attr_descriptor_t *cur;
 
@@ -34,12 +34,12 @@ static const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name,
     return cur;
 }
 
-static size_t ed25519_get_bitlen(const void *ctx)
+size_t ed25519_get_bitlen(const void *ctx)
 {
     const mbedtls_ed25519_context *rsa = (const mbedtls_ed25519_context *) ctx;
     return 8 * 32;
 }
-static int ed25519_can_do(mbedtls_pk_type_t type)
+int ed25519_can_do(mbedtls_pk_type_t type)
 {
     return type == MBEDTLS_PK_ED25519;
 }
@@ -68,12 +68,12 @@ void mbedtls_ed25519_init(mbedtls_ed25519_context *ctx)
     return ctx;
 }
 
-static void ed25519_free_wrap(void *ctx)
+void ed25519_free_wrap(void *ctx)
 {
     mbedtls_ed25519_free((mbedtls_ed25519_context *) ctx);
     //mbedtls_free(ctx);
 }
-static int ed25519_check_pair_wrap(const void *pub, const void *prv,
+int ed25519_check_pair_wrap(const void *pub, const void *prv,
                                int (*f_rng)(void *, unsigned char *, size_t),
                                void *p_rng)
 { 
@@ -88,7 +88,7 @@ static int ed25519_check_pair_wrap(const void *pub, const void *prv,
                                       ((mbedtls_ed25519_context *)pub)->pub_key,
                                       (unsigned char *)prv);
 }
-static int ed25519_encrypt_wrap(void *ctx,
+int ed25519_encrypt_wrap(void *ctx,
                             const unsigned char *input, size_t ilen,
                             unsigned char *output, size_t *olen, size_t osize,
                             int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
@@ -104,7 +104,7 @@ static int ed25519_encrypt_wrap(void *ctx,
 
 
 
-static int ed25519_decrypt_wrap(void *ctx,
+int ed25519_decrypt_wrap(void *ctx,
                             const unsigned char *input, size_t ilen,
                             unsigned char *output, size_t *olen, size_t osize,
                             int (*f_rng)(void *, unsigned char *, size_t), void *p_rng){
@@ -2396,7 +2396,7 @@ int asn1_get_tagged_int(unsigned char **p,
     return 0;
 }
 
-static const oid_sig_alg_t oid_sig_alg[] =
+const oid_sig_alg_t oid_sig_alg[] =
 { 
   {
     OID_DESCRIPTOR(MBEDTLS_OID_PKCS1_MD5,        "md5WithRSAEncryption",     "RSA with MD5"), MBEDTLS_MD_MD5,      MBEDTLS_PK_RSA,
@@ -2510,7 +2510,7 @@ int mbedtls_x509_set_extension(mbedtls_asn1_named_data *head, const char *oid, s
 /*
  * X.509 v2/v3 unique identifier (not parsed)
  */
-static int x509_get_uid(unsigned char **p,
+int x509_get_uid(unsigned char **p,
                         const unsigned char *end,
                         mbedtls_x509_buf *uid, int n)
 {
