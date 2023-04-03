@@ -15,6 +15,9 @@
 #include <sbi/sbi_console.h>
 #include <sbi/sbi_hart.h>
 
+#include "x509custom/x509custom.h"
+
+
 static int sm_init_done = 0;
 static int sm_region_id = 0, os_region_id = 0;
 
@@ -29,6 +32,19 @@ byte sm_signature[SIGNATURE_SIZE] = { 0, };
 byte sm_public_key[PUBLIC_KEY_SIZE] = { 0, };
 byte sm_private_key[PRIVATE_KEY_SIZE] = { 0, };
 byte dev_public_key[PUBLIC_KEY_SIZE] = { 0, };
+
+extern byte sanctum_cert_sm[512];
+extern byte sanctum_CDI[64];
+extern byte sanctum_ECA_pk[64];
+extern byte sanctum_sm_hash_to_check[64];
+extern int sanctum_length_cert;
+
+byte cert_sm[512];
+byte CDI[64];
+byte ECA_pk[64];
+byte sm_hash_to_check[64];
+int length_cert;
+
 
 
 extern byte sanctum_eca_key_pub[PUBLIC_KEY_SIZE];
@@ -94,6 +110,25 @@ void sm_copy_key()
   sbi_memcpy(sm_public_key, sanctum_sm_public_key, PUBLIC_KEY_SIZE);
   sbi_memcpy(sm_private_key, sanctum_sm_secret_key, PRIVATE_KEY_SIZE);
   sbi_memcpy(dev_public_key, sanctum_dev_public_key, PUBLIC_KEY_SIZE);
+
+  sbi_memcpy(cert_sm, sanctum_cert_sm, 64);
+  sbi_memcpy(CDI, sanctum_CDI, 64);
+  sbi_memcpy(ECA_pk, sanctum_ECA_pkI, 64);
+  sbi_memcpy(sm_hash_to_check, sanctum_sm_hash_to_check, 64);
+  sbi_memcpy(length_cert,sanctum_length_cert, 4)
+  /*
+  if ((ret = mbedtls_x509_crt_parse_der(&uff_cert, cert_real, effe_len_cert_der)) == 0){
+        printf("Parsing corretto\n");
+
+  }
+  printf("Stampa dopo lettura pubblica\n");
+    for(int i =0; i <32; i ++){
+        printf("%02x",uff_cert.pk.pk_ctx.pub_key[i]);//   pk_ctx->pub_key[i]);
+    }
+  printf("\n");
+  */
+
+
 }
 
 void sm_print_hash()

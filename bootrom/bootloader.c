@@ -50,6 +50,12 @@ extern byte sanctum_sm_signature[64];
 
 #define DRAM_BASE 0x80000000
 
+extern byte sanctum_cert_sm[512];
+extern byte sanctum_CDI[64];
+extern byte sanctum_ECA_pk[64];
+extern byte sanctum_sm_hash_to_check[64];
+extern int sanctum_length_cert;
+
 /* Update this to generate valid entropy for target platform*/
 inline byte random_byte(unsigned int i)
 {
@@ -262,11 +268,12 @@ void bootloader()
     return 0;
   }
   */
-  byte scratchpad_app[196+effe_len_cert_der];
+  //byte scratchpad_app[196+effe_len_cert_der];
   memcpy(scratchpad_app, sanctum_sm_hash, 64);
-  memcpy(scratchpad_app + 64, sanctum_compound_devide_identifier, 64);
-  memcpy(scratchpad_app + 64, sanctum_eca_key_pub, 64);
-  memcpy(scratchpad_app + 64, cert_real, effe_len_cert_der );
+  memcpy(sanctum_CDI, sanctum_compound_devide_identifier, 64);
+  memcpy(sanctum_ECA_pk, sanctum_eca_key_pub, 64);
+  memcpy(sanctum_cert_sm, cert_real, effe_len_cert_der );
+  sanctum_length_cert = effe_len_cert_der;
 
 
   memset((void *)sanctum_sm_key_priv, 0, sizeof(*sanctum_sm_key_priv));
