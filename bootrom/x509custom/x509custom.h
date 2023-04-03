@@ -1,12 +1,10 @@
-#ifndef X509CUSTOM_H
-#define X509CUSTOM_H
 
 #include <stddef.h>
 #include "oid_custom.h"
-#include "string.h"
-#include <stdlib.h>
 //#include <stdlib.h>
 //#include <stdio.h>
+//#include <stdint.h>
+
 #define MBEDTLS_PRIVATE(member) member
 #define MBEDTLS_X509_RFC5280_MAX_SERIAL_LEN 20
 #define MBEDTLS_X509_CRT_VERSION_1              0
@@ -15,8 +13,8 @@
 #define MBEDTLS_X509_RFC5280_MAX_SERIAL_LEN 20
 #define MBEDTLS_X509_RFC5280_UTC_TIME_LEN   15
 #define MBEDTLS_X509_MAX_DN_NAME_SIZE         256 
-#define mbedtls_free       free
-#define mbedtls_calloc     calloc
+//#define mbedtls_free       free
+//#define mbedtls_calloc     calloc
 #define MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED -0x006E
 #define MBEDTLS_ERR_PK_KEY_INVALID_FORMAT  -0x3D00
 #define MBEDTLS_RSA_C
@@ -205,6 +203,18 @@ typedef struct mbedtls_pk_debug_item {
     void *MBEDTLS_PRIVATE(value);
 } mbedtls_pk_debug_item;
 
+typedef struct mbedtls_ed25519_context {
+    int MBEDTLS_PRIVATE(ver);                    /*!<  Reserved for internal purposes.
+                                                  *    Do not set this field in application
+                                                  *    code. Its meaning might change without
+                                                  *    notice. */
+    size_t len;                 /*!<  The size of \p N in Bytes. */
+    unsigned char pub_key[32];
+    unsigned char priv_key[64];
+
+}
+mbedtls_ed25519_context;
+
 
 struct mbedtls_pk_info_t {
     /** Public key type */
@@ -249,7 +259,7 @@ struct mbedtls_pk_info_t {
                            void *p_rng);
 
     /** Allocate a new context */
-    void * (*ctx_alloc_func)(void);
+    /*void * */ mbedtls_ed25519_context (*ctx_alloc_func)(void); //(void)
 
     /** Free the given context */
     void (*ctx_free_func)(void *ctx);
@@ -260,9 +270,12 @@ struct mbedtls_pk_info_t {
 
 typedef struct mbedtls_pk_info_t mbedtls_pk_info_t;
 
+
+
+
 typedef struct mbedtls_pk_context {
     const mbedtls_pk_info_t *pk_info;    /**< Public key information         */
-    void *pk_ctx;                        /**< Underlying public key context  */
+    /*void **/mbedtls_ed25519_context pk_ctx;                        /**< Underlying public key context  */
 } mbedtls_pk_context;
 
 /**
@@ -272,8 +285,16 @@ typedef struct mbedtls_asn1_buf {
     int tag;                /**< ASN1 type, e.g. MBEDTLS_ASN1_UTF8_STRING. */
     size_t len;             /**< ASN1 length, in octets. */
     unsigned char *p;       /**< ASN1 data, e.g. in ASCII. */
+    unsigned char p_arr[512];
 }
 mbedtls_asn1_buf;
+typedef struct mbedtls_asn1_buf_small {
+    int tag;                /**< ASN1 type, e.g. MBEDTLS_ASN1_UTF8_STRING. */
+    size_t len;             /**< ASN1 length, in octets. */
+    unsigned char *p;       /**< ASN1 data, e.g. in ASCII. */
+    unsigned char p_arr[32];
+}
+mbedtls_asn1_buf_small;
 
 typedef struct mbedtls_asn1_named_data {
     mbedtls_asn1_buf oid;                   /**< The object identifier. */
@@ -309,6 +330,15 @@ typedef struct mbedtls_x509write_cert {
     char MBEDTLS_PRIVATE(not_before)[MBEDTLS_X509_RFC5280_UTC_TIME_LEN + 1];
     char MBEDTLS_PRIVATE(not_after)[MBEDTLS_X509_RFC5280_UTC_TIME_LEN + 1];
     mbedtls_asn1_named_data *MBEDTLS_PRIVATE(extensions);
+
+    //Changes
+    mbedtls_asn1_named_data issuer_arr[10];
+    mbedtls_asn1_named_data subject_arr[10];
+    int ne_issue_arr;
+    int ne_subje_arr;
+     mbedtls_asn1_named_data extens_arr[10];
+    int ne_ext_arr;
+
 }
 mbedtls_x509write_cert;
 
@@ -326,17 +356,7 @@ typedef struct {
                       * MBEDTLS_ASN1_UTF8_STRING for UTF-8. */
 } x509_attr_descriptor_t;
 
-typedef struct mbedtls_ed25519_context {
-    int MBEDTLS_PRIVATE(ver);                    /*!<  Reserved for internal purposes.
-                                                  *    Do not set this field in application
-                                                  *    code. Its meaning might change without
-                                                  *    notice. */
-    size_t len;                 /*!<  The size of \p N in Bytes. */
-    unsigned char pub_key[32];
-    unsigned char priv_key[64];
 
-}
-mbedtls_ed25519_context;
 
 typedef struct mbedtls_asn1_sequence {
     mbedtls_asn1_buf buf;                   /**< Buffer containing the given ASN.1 item. */
@@ -385,6 +405,13 @@ typedef struct mbedtls_x509_crt {
 
     mbedtls_x509_name issuer;           /**< The parsed issuer data (named information object). */
     mbedtls_x509_name subject;          /**< The parsed subject data (named information object). */
+    mbedtls_asn1_named_data issuer_name[10];
+    mbedtls_asn1_named_data subject_name[10];
+    mbedtls_asn1_named_data issuer_arr[10];
+    mbedtls_asn1_named_data subject_arr[10];
+    int ne_issue_arr;
+    int ne_subje_arr;
+
 
     mbedtls_x509_time valid_from;       /**< Start time of certificate validity. */
     mbedtls_x509_time valid_to;         /**< End time of certificate validity. */
@@ -535,15 +562,15 @@ static const x509_attr_descriptor_t x509_attrs[] =
 };
 
 void mbedtls_x509write_crt_init(mbedtls_x509write_cert *ctx);
-int mbedtls_x509write_crt_set_subject_name(mbedtls_x509write_cert *ctx, const char *subject_name);
-int mbedtls_x509write_crt_set_issuer_name(mbedtls_x509write_cert *ctx, const char *issuer_name);
+//int mbedtls_x509write_crt_set_subject_name(mbedtls_x509write_cert *ctx, const char *subject_name);
+//int mbedtls_x509write_crt_set_issuer_name(mbedtls_x509write_cert *ctx, const char *issuer_name);
 int mbedtls_pk_parse_public_key(mbedtls_pk_context *ctx,  const unsigned char *key, size_t keylen, int type_k);
 void mbedtls_x509write_crt_set_subject_key(mbedtls_x509write_cert *ctx, mbedtls_pk_context *key);
 int mbedtls_x509write_crt_set_validity(mbedtls_x509write_cert *ctx, const char *not_before, const char *not_after);  
 void mbedtls_pk_init(mbedtls_pk_context *ctx);     
 static size_t ed25519_get_bitlen(const void *ctx);
 static int ed25519_can_do(mbedtls_pk_type_t type);
-static void *ed25519_alloc_wrap(void);
+/*void*/ mbedtls_ed25519_context ed25519_alloc_wrap(void);
 static void ed25519_free_wrap(void *ctx);
 int mbedtls_ed25519_check_pub_priv(unsigned char* priv, unsigned char* pub, unsigned char* seed);
 static int ed25519_check_pair_wrap(const void *pub, const void *prv, int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
@@ -553,7 +580,7 @@ static int ed25519_encrypt_wrap(void *ctx,
                             int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
 static int ed25519_decrypt_wrap(void *ctx, const unsigned char *input, size_t ilen,unsigned char *output, size_t *olen, size_t osize, int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
 int mbedtls_x509_string_to_names(mbedtls_asn1_named_data **head, const char *name);
-void mbedtls_asn1_free_named_data_list(mbedtls_asn1_named_data **head);
+//void mbedtls_asn1_free_named_data_list(mbedtls_asn1_named_data **head);
 static const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name, size_t name_len);
 mbedtls_asn1_named_data *mbedtls_asn1_store_named_data( mbedtls_asn1_named_data **head,const char *oid, size_t oid_len,const unsigned char *val,size_t val_len);
 mbedtls_asn1_named_data *asn1_find_named_data(mbedtls_asn1_named_data *list,const char *oid, size_t len);
@@ -648,17 +675,31 @@ int asn1_get_tagged_int(unsigned char **p,const unsigned char *end,int tag, int 
 int mbedtls_x509_write_extensions(unsigned char **p, unsigned char *start,  mbedtls_asn1_named_data *first);
 int x509_write_extension(unsigned char **p, unsigned char *start, mbedtls_asn1_named_data *ext);
 int mbedtls_asn1_write_bool(unsigned char **p, const unsigned char *start, int boolean);
-int mbedtls_x509_set_extension(mbedtls_asn1_named_data **head, const char *oid, size_t oid_len, int critical, const unsigned char *val, size_t val_len);
+int mbedtls_x509_set_extension(mbedtls_asn1_named_data *head, const char *oid, size_t oid_len,
+                               int critical, const unsigned char *val, size_t val_len, int *ne);
 int mbedtls_x509write_crt_set_extension(mbedtls_x509write_cert *ctx,  const char *oid, size_t oid_len, int critical, const unsigned char *val, size_t val_len);
 static int x509_get_uid(unsigned char **p, const unsigned char *end,mbedtls_x509_buf *uid, int n);
 int pk_get_pk_alg(unsigned char **p,
                          const unsigned char *end,
                          mbedtls_pk_type_t *pk_alg, mbedtls_asn1_buf *params);
-                         /*
+                         
 unsigned int my_strlen(const char *s);
-int strncmp( const char * s1, const char * s2, size_t n );
+
+int my_strncmp( const char * s1, const char * s2, size_t n );
 char* my_strncpy(char* destination, const char* source, size_t num);
 void * my_memmove(void* dest, const void* src, unsigned int n);
-int memcmp (const void *str1, const void *str2, size_t count);
-*/
-#endif
+int my_memcmp (const void *str1, const void *str2, size_t count);
+void* my_memset(void* dest, int byte, size_t len);
+void* my_memcpy(void* dest, const void* src, size_t len);
+int mbedtls_x509write_crt_set_issuer_name_mod(mbedtls_x509write_cert *ctx, const char *issuer_name);
+int mbedtls_x509_string_to_names_mod(mbedtls_asn1_named_data *head, const char *name, int *ne);
+int mbedtls_asn1_store_named_data_mod( mbedtls_asn1_named_data *head,const char *oid, size_t oid_len,const unsigned char *val,size_t val_len, int *ne);
+int asn1_find_named_data_mod(mbedtls_asn1_named_data *list,const char *oid, size_t len, size_t ne);
+int mbedtls_x509write_crt_set_subject_name_mod(mbedtls_x509write_cert *ctx, const char *subject_name);
+int x509_write_name_mod(unsigned char **p, unsigned char *start,mbedtls_asn1_named_data cur_name);
+int mbedtls_x509_write_names_mod(unsigned char **p, unsigned char *start,mbedtls_asn1_named_data *arr, int ne);
+int x509_get_attr_type_value_mod(unsigned char **p,const unsigned char *end, mbedtls_asn1_named_data *cur);
+int mbedtls_x509_get_name_mod(unsigned char **p, const unsigned char *end, mbedtls_asn1_named_data *cur, int *ne);
+void mbedtls_asn1_free_named_data_list_mod(int *ne);
+
+                  
