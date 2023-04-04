@@ -4,7 +4,7 @@
 
 #define ED25519_NO_SEED 1
 
-#include "x509custom/test.h"
+#include "x509custom/x509custom.h"
 
 #include "sha3/sha3.h"
 /* Adopted from https://github.com/orlp/ed25519

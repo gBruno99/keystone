@@ -33,6 +33,8 @@ byte sm_public_key[PUBLIC_KEY_SIZE] = { 0, };
 byte sm_private_key[PRIVATE_KEY_SIZE] = { 0, };
 byte dev_public_key[PUBLIC_KEY_SIZE] = { 0, };
 
+
+////////////////////////////////////////////
 extern byte sanctum_cert_sm[512];
 extern byte sanctum_CDI[64];
 extern byte sanctum_ECA_pk[64];
@@ -43,6 +45,7 @@ byte CDI[64] = { 0, };
 byte ECA_pk[64] = { 0, };
 byte sm_hash_to_check[64] = { 0, };
 int length_cert = 0;
+////////////////////////////////////////////
 
 int osm_pmp_set(uint8_t perm)
 {
