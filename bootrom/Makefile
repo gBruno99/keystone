@@ -51,7 +51,9 @@ bootrom_sources = \
 	./ed25519/*.c \
 	./sha3/*.c \
 	./x509custom/*.c\
+	./prova.c#\
 	./string.c#\
+	./prova.c#\
 	./mbed_tls_keystone/*.c#\
 	./mbed_tls_keystone/crypto_*.c#\
 	./openssl/crypto/evp/kdf_meth.c \

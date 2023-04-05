@@ -4,7 +4,7 @@
 
 #define ED25519_NO_SEED 1
 
-#include "x509custom/x509custom.h"
+//#include "x509custom/x509custom.h"
 
 #include "sha3/sha3.h"
 /* Adopted from https://github.com/orlp/ed25519
@@ -32,6 +32,8 @@
 /*
   provides memcpy, memset
 */
+
+#include "x509custom/x509custom.h"
 
 typedef unsigned char byte;
 
@@ -174,17 +176,19 @@ void bootloader()
   // Generating the key associated to the embedded CA
   ed25519_create_keypair(sanctum_eca_key_pub, sanctum_eca_key_priv, sanctum_device_root_key_priv);
 
+  
   // Create the certificate structure mbedtls_x509write_cert to release the cert of the security monitor
   mbedtls_x509write_cert cert;
   mbedtls_x509write_crt_init(&cert);
 
   // Setting the name of the issuer of the cert
+  
   ret = mbedtls_x509write_crt_set_issuer_name_mod(&cert, "O=Device Manufacturer");
   if (ret != 0)
   {
     return 0;
   }
-
+  
   // Setting the name of the subject of the cert
   ret = mbedtls_x509write_crt_set_subject_name_mod(&cert, "O=Security Monitor");
   if (ret != 0)
@@ -200,9 +204,7 @@ void bootloader()
   mbedtls_pk_context issu_key;
   mbedtls_pk_init(&issu_key);
 
-  /*
-  mbedtls_x509_crt uff_cert;
-  mbedtls_x509_crt_init(&uff_cert);*/
+  
 
   // Parsing the private key of the embedded CA that will be used to sign the certificate of the security monitor
   ret = mbedtls_pk_parse_public_key(&issu_key, sanctum_eca_key_priv, 64, 1);
@@ -218,21 +220,22 @@ void bootloader()
     return 0;
   }
 
-  // Variable used to specify the serial of the cert
-  unsigned char serial = {"0x0, 0x0, 0x01"};
-
+  
+  // Variable  used to specify the serial of the cert
+  unsigned char serial[] = {"0x0, 0x0, 0x01"};
+  
   // The public key of the security monitor is inserted in the structure
   mbedtls_x509write_crt_set_subject_key(&cert, &subj_key);
 
   // The private key of the embedded CA is used later to sign the cert
   mbedtls_x509write_crt_set_issuer_key(&cert, &issu_key);
-
+  
   // The serial of the cert is setted
   mbedtls_x509write_crt_set_serial_raw(&cert, serial, 3);
-
+  
   // The algoithm used to do the hash for the signature is specified
   mbedtls_x509write_crt_set_md_alg(&cert, MBEDTLS_MD_SHA512);
-
+  
   // The validity of the crt is specified
   ret = mbedtls_x509write_crt_set_validity(&cert, "20220101000000", "20230101000000");
   if (ret != 0)
@@ -244,6 +247,7 @@ void bootloader()
   size_t len_cert_der_tot = 512;
   size_t effe_len_cert_der;
   
+  
   // The structure mbedtls_x509write_cert is parsed to create a x509 cert in der format, signed and written in memory
   ret = mbedtls_x509write_crt_der(&cert, cert_der, len_cert_der_tot, NULL, NULL);
   if (ret != 0)
@@ -254,12 +258,14 @@ void bootloader()
   {
     return 0;
   }
-
+  
   unsigned char *cert_real = cert_der;
   // effe_len_cert_der stands for the length of the cert, placed starting from the end of the buffer cert_der
   int dif = 4096 - effe_len_cert_der;
   // cert_real points to the starts of the cert in der format
   cert_real += dif;
+  sanctum_length_cert = effe_len_cert_der;
+  memcpy(sanctum_cert_sm, cert_real, sanctum_length_cert);
 
   /*
 
@@ -268,12 +274,7 @@ void bootloader()
     return 0;
   }
   */
-  byte scratchpad_app[196+effe_len_cert_der];
-  //memcpy(scratchpad_app, sanctum_sm_hash, 64);
-  memcpy(scratchpad_app, sanctum_CDI, 64);
-  memcpy(scratchpad_app, sanctum_eca_key_pub, 64);
-  memcpy(scratchpad_app, cert_real, effe_len_cert_der );
-  sanctum_length_cert = effe_len_cert_der;
+
 
 
   memset((void *)sanctum_sm_key_priv, 0, sizeof(*sanctum_sm_key_priv));
