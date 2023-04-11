@@ -1,6 +1,7 @@
 #include "myString.h"
 #include "x509custom.h"
 #include "ed25519/ed25519.h"
+#include "sha3/sha3.h"
 
 
 //////////////////////////////////////////////////////////////////////
@@ -127,14 +128,16 @@ int mbedtls_ed25519_write_signature_restartable(mbedtls_ed25519_context *ctx,
                                               mbedtls_ed25519_restart_ctx *rs_ctx)
 {
 
-    unsigned char* app_sign[64];
+    
     //ed25519_sign(app_sign, hash, sizeof(hash), ctx->pub_key, ctx->priv_key);
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char buf[256] = { 0 };
+    unsigned char buf[64] = { 0 };
     unsigned char *p = buf + sizeof(buf);
-    size_t len = 0;
-    ed25519_sign(sig, hash, sizeof(hash), ctx->pub_key, ctx->priv_key);
+    size_t len =  0;
+    //unsigned char sign_no_tag[64];
+    //ed25519_sign(sign_no_tag, hash, sizeof(hash), ctx->pub_key, ctx->priv_key);
     /*
+    unsigned char* app_sign[64];
     unsigned char app_sign_test[] = {   0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 
                                     0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9,
                                     0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9,
@@ -143,11 +146,11 @@ int mbedtls_ed25519_write_signature_restartable(mbedtls_ed25519_context *ctx,
                                     0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9,
                                     0x0, 0x1, 0x2, 0x3
                                 };
-                                */
+                                /*
 
 
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_raw_buffer(&p, buf,
-                                                            (const unsigned char *) sig, 64));
+                                                            (const unsigned char *) sign_no_tag, sizeof(sign_no_tag)));
 
 
     //MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&p, buf, len));
@@ -158,8 +161,7 @@ int mbedtls_ed25519_write_signature_restartable(mbedtls_ed25519_context *ctx,
     }
     */
 
-    my_memcpy(sig, p, len);
-    *slen = len;
+    //my_memcpy(sig, p, len);
     /*
     printf("FIRMA OID\n");
     for(int i =0; i <*slen; i ++){
@@ -167,7 +169,9 @@ int mbedtls_ed25519_write_signature_restartable(mbedtls_ed25519_context *ctx,
     }
     printf("\n");
     */
-   return 0;
+    ed25519_sign(sig, hash, sizeof(hash), ctx->pub_key, ctx->priv_key);
+    *slen = 64;
+    return 0;
 
 }
 
@@ -566,7 +570,7 @@ int mbedtls_ed25519_check_pub_priv(unsigned char* priv, unsigned char* pub, unsi
 }
 
 int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, size_t size,
-                                int (*f_rng)(void *, unsigned char *, size_t), void *p_rng){
+                                int (*f_rng)(void *, unsigned char *, size_t), void *p_rng){//, unsigned char* test){
     
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const char *sig_oid;
@@ -579,6 +583,8 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
     size_t sub_len = 0, pub_len = 0, sig_and_oid_len = 0, sig_len;
     size_t len = 0;
     mbedtls_pk_type_t pk_alg;
+
+    sha3_ctx_t hash_ctx;
 
     /*
      * Prepare data to be signed at the end of the target buffer
@@ -743,14 +749,25 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
         sha3_update(&hash_ctx, c, len);
         sha3_final(hash, &hash_ctx);
      * 
-     * */             
+     * */ 
+
+    sha3_init(&hash_ctx, 64);
+    sha3_update(&hash_ctx, c, len);
+    sha3_final(hash, &hash_ctx);
+
+    //for(int i = 0; i < 64; i ++)
+      //  test[i] = hash[i];
+   // my_memcpy(test, hash, 64);
+    /*
     if ((ret = mbedtls_pk_sign(ctx->issuer_key, ctx->md_alg,
                                hash, hash_length, sig, sizeof(sig), &sig_len,
                                f_rng, p_rng)) != 0) {
         return ret;
-    }     
+    } 
+    */    
 
-    //sig_len = 64;
+    ed25519_sign(sig, hash, 64, ctx->issuer_key->pk_ctx.pub_key, ctx->issuer_key->pk_ctx.priv_key);
+    sig_len = 64;
 
     /* Move CRT to the front of the buffer to have space
      * for the signature. */

@@ -14,6 +14,7 @@
 #include <sbi/riscv_barrier.h>
 #include <sbi/sbi_console.h>
 #include <sbi/sbi_hart.h>
+#include "sha3/sha3.h"
 
 #include "x509custom.h"
 
@@ -53,6 +54,12 @@ byte sm_key_pub[64] = { 0, };
 byte length_cert;
 
 mbedtls_x509_crt uff_cert;
+
+byte hash_for_verification[64];
+sha3_ctx_t ctx_hash;
+
+// Variable used for testing porpouse to pass data from the boot stage to the sm
+extern byte test[64];
 
 
 int osm_pmp_set(uint8_t perm)
@@ -112,7 +119,7 @@ void sm_copy_key()
   sbi_memcpy(sm_private_key, sanctum_sm_secret_key, PRIVATE_KEY_SIZE);
   sbi_memcpy(dev_public_key, sanctum_dev_public_key, PUBLIC_KEY_SIZE);
   
-  sbi_printf("Dentro copia variabili\n");
+  sbi_printf("Data obtained from the booting stage:\n");
 
   sbi_memcpy(sm_key_pub, sanctum_sm_key_pub, 64);
   sbi_memcpy(CDI, sanctum_CDI, 64);
@@ -144,11 +151,62 @@ void sm_copy_key()
   for(int i = 0; i < length_cert; i ++){
     sbi_printf("%02x", cert_sm[i]);
   }
-  sbi_printf("\n-------------------------------------------------\n\n\n\n");
+  sbi_printf("\n-------------------------------------------------\n");
   
   if ((mbedtls_x509_crt_parse_der(&uff_cert, cert_sm, length_cert)) != 0){
-      sbi_printf("[SM] Error parsing the certificate created during the booting process");
+      sbi_printf("\n\n\n[SM] Error parsing the certificate created during the booting process");
       sbi_hart_hang();
+  }
+  else{
+    sbi_printf("\n\n\n[SM] The certificate of the security monitor is correctly parsed\n\n");
+
+  }
+
+  sbi_printf("Signature of the certificate: \n");
+    for(int i =0; i <64; i ++){
+        sbi_printf("%02x",uff_cert.sig.p[i]);//   pk_ctx->pub_key[i]);
+    }
+  sbi_printf("\n\n\n\n");
+
+   /**
+   * Computing the hash to verify the signature of the certificate
+   * 
+  */
+  
+  sha3_init(&ctx_hash, 64);
+  sha3_update(&ctx_hash, uff_cert.tbs.p, uff_cert.tbs.len);
+  sha3_final(hash_for_verification, &ctx_hash);
+  //hash_for_verification[0] = 0x23;
+
+  /*
+  *
+  * Test used to check if the hash obtained from parsing the cert in the der format
+  * is the same of the hash computed during the creation of the cert in der format to sign it
+  * 
+  sbi_printf("hash_for_verification: \n");
+    for(int i =0; i <64; i ++){
+        sbi_printf("%02x",hash_for_verification[i]);//   pk_ctx->pub_key[i]);
+    }
+  sbi_printf("\n\n\n\n");
+  sbi_printf("test: \n");
+    for(int i =0; i <64; i ++){
+        sbi_printf("%02x",test[i]);//   pk_ctx->pub_key[i]);
+    }
+  sbi_printf("\n\n\n\n");
+  */
+
+
+  /**
+   * Verifying the signature
+   * 
+  */
+  if(ed25519_verify(uff_cert.sig.p, hash_for_verification, 64, ECA_pk) == 0){
+    sbi_printf("[SM] Error verifying the signature of the certificate\n\n\n\n\n");
+    sbi_hart_hang();
+  }
+  else{
+    sbi_printf("[SM] The signature of the certificate is ok\n\n\n\n\n");
+
   }
 
   /*
@@ -166,7 +224,10 @@ void sm_copy_key()
         sbi_printf("%02x",uff_cert.pk.pk_ctx.pub_key[i]);//   pk_ctx->pub_key[i]);
     }
   sbi_printf("\n\n\n\n");
+
   ////////////////////////////////////////////////////////////////////////////////
+  
+
 }
 
 void sm_print_hash()

@@ -598,7 +598,7 @@ void mbedtls_ed25519_init(mbedtls_ed25519_context *ctx);
 int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx,
                               unsigned char *buf, size_t size,
                               int (*f_rng)(void *, unsigned char *, size_t),
-                              void *p_rng);
+                              void *p_rng);//, unsigned char* test);
 int mbedtls_pk_write_pubkey_der(const mbedtls_pk_context *key, unsigned char *buf, size_t size);
 int mbedtls_pk_write_pubkey(unsigned char **p, unsigned char *start, const mbedtls_pk_context *key);     
 int pk_write_ed25519_pubkey(unsigned char **p, unsigned char *start, mbedtls_ed25519_context ed25519);                       

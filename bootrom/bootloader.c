@@ -52,6 +52,8 @@ extern byte sanctum_sm_key_pub[64];
 extern byte sanctum_cert_sm[256];
 extern int sanctum_length_cert;
 
+// Variable used for testing porpouse to pass data from the boot stage to the sm
+extern byte test[64];
 
 unsigned int sanctum_sm_size = 0x1ff000;
 
@@ -80,12 +82,9 @@ void bootloader()
   byte sanctum_sm_sign[64];              // no usefull if there is a file with the sign of the security monitor
   byte sanctum_pub_key_manufacturer[64]; // no usefull if there is a file with the pub key of the manufacturer
 
-  byte sanctum_compound_devide_identifier[64];
-
   byte sanctum_sm_signature_drk[64];
 
   byte sanctum_eca_key_priv[64];
-  byte sanctum_eca_key_pub[32];
 
   byte sanctum_sm_key_priv[64];
 
@@ -216,9 +215,14 @@ void bootloader()
   mbedtls_pk_init(&issu_key);
 
   
-
   // Parsing the private key of the embedded CA that will be used to sign the certificate of the security monitor
   ret = mbedtls_pk_parse_public_key(&issu_key, sanctum_eca_key_priv, 64, 1);
+  if (ret != 0)
+  {
+    return 0;
+  }
+
+  ret = mbedtls_pk_parse_public_key(&issu_key, sanctum_ECA_pk, 32, 0);
   if (ret != 0)
   {
     return 0;
@@ -258,9 +262,8 @@ void bootloader()
   size_t len_cert_der_tot = 512;
   int effe_len_cert_der;
   
-  
   // The structure mbedtls_x509write_cert is parsed to create a x509 cert in der format, signed and written in memory
-  ret = mbedtls_x509write_crt_der(&cert, cert_der, 512, NULL, NULL);
+  ret = mbedtls_x509write_crt_der(&cert, cert_der, 512, NULL, NULL);//, test);
   if (ret != 0)
   {
     effe_len_cert_der = ret;
@@ -278,6 +281,30 @@ void bootloader()
   sanctum_length_cert = effe_len_cert_der;
   memcpy(sanctum_cert_sm, cert_real, effe_len_cert_der);
 
+
+  //Test to check the signature
+  //////////////////////////////////////////////////////////////////////////////
+  /*
+  mbedtls_x509_crt uff_cert;
+  mbedtls_x509_crt_init(&uff_cert);
+  if ((mbedtls_x509_crt_parse_der(&uff_cert, sanctum_cert_sm, sanctum_length_cert)) != 0){
+     return 0;
+  }
+  unsigned char app[64];
+  sha3_init(&hash_ctx, 64);
+  sha3_update(&hash_ctx, uff_cert.tbs.p, uff_cert.tbs.len);
+  sha3_final(app, &hash_ctx);
+
+  if(my_memcmp(app, test, 64) != 0)
+    return 0;
+  */
+  ///////////////////////////////////////////////////////////////////////////////////////////
+  /*
+  if(mbedtls_x509write_crt_dered25519_verify(uff_cert.sig.p, app, 64, sanctum_ECA_pk) == 0){
+    return 0;
+  }
+  */
+
   //sanctum_length_cert = effe_len_cert_der;
 
 
@@ -285,9 +312,6 @@ void bootloader()
 
   // Erase DRK_priv
   memset((void *)sanctum_device_root_key_priv, 0, sizeof(*sanctum_device_root_key_priv));
-
-  // Erase CDI
-  memset((void *)sanctum_compound_devide_identifier, 0, sizeof(*sanctum_compound_devide_identifier));
 
   // Erase eca_key_priv
   memset((void *)sanctum_eca_key_priv, 0, sizeof(*sanctum_eca_key_priv));
