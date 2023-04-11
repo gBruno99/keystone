@@ -36,7 +36,7 @@ PROVIDE( sanctum_sm_signature = . );
 PROVIDE( sanctum_CDI = . );
 . += 0x40;
 
-/* 64 Bytes : security monitor's signature by device */
+/* 32 Bytes : security monitor's signature by device */
 PROVIDE( sanctum_ECA_pk = . );
 . += 0x40;
 
@@ -44,12 +44,22 @@ PROVIDE( sanctum_ECA_pk = . );
 PROVIDE( sanctum_sm_hash_to_check = . );
 . += 0x40;
 
-/* 4 Bytes : security monitor's signature by device */
+/* 64 Bytes : security monitor's signature by device */
+PROVIDE( sanctum_sm_key_pub = . );
+. += 0x40;
+
+/* 4 Byte : security monitor's signature by device */
 PROVIDE( sanctum_length_cert = . );
 . += 0x04;
 
-/* 512 Bytes : security monitor's signature by device */
+/* 256 Bytes : security monitor's signature by device */
 PROVIDE( sanctum_cert_sm = . );
-. += 0x200;
+. += 0x100;
+
+
+
+
+
+
 
 

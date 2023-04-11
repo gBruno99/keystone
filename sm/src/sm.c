@@ -15,7 +15,7 @@
 #include <sbi/sbi_console.h>
 #include <sbi/sbi_hart.h>
 
-#include "x509custom/x509custom.h"
+#include "x509custom.h"
 
 
 static int sm_init_done = 0;
@@ -27,27 +27,33 @@ extern byte sanctum_sm_signature[SIGNATURE_SIZE];
 extern byte sanctum_sm_secret_key[PRIVATE_KEY_SIZE];
 extern byte sanctum_sm_public_key[PUBLIC_KEY_SIZE];
 extern byte sanctum_dev_public_key[PUBLIC_KEY_SIZE];
+
+extern byte sanctum_CDI[64];
+// the pk of the ECA is only 32bytes, but according to the alignment of the memory, it has to be of 64 bytes
+extern byte sanctum_ECA_pk[64];
+extern byte sanctum_sm_hash_to_check[64];
+/*
+* Variable used to verify that the public key of the sm created during the boot is the same key obtained after the
+* parsing of the certificate in der format
+*/
+extern byte sanctum_sm_key_pub[64];
+extern byte sanctum_cert_sm[256];
+extern int sanctum_length_cert;
+
 byte sm_hash[MDSIZE] = { 0, };
 byte sm_signature[SIGNATURE_SIZE] = { 0, };
 byte sm_public_key[PUBLIC_KEY_SIZE] = { 0, };
 byte sm_private_key[PRIVATE_KEY_SIZE] = { 0, };
 byte dev_public_key[PUBLIC_KEY_SIZE] = { 0, };
-
-
-////////////////////////////////////////////
-/*
-extern byte sanctum_cert_sm[512];
-extern byte sanctum_CDI[64];
-extern byte sanctum_ECA_pk[64];
-extern byte sanctum_sm_hash_to_check[64];
-extern int sanctum_length_cert;
-byte cert_sm[512] = { 0, };
+byte cert_sm[256] = { 0, };
 byte CDI[64] = { 0, };
 byte ECA_pk[64] = { 0, };
 byte sm_hash_to_check[64] = { 0, };
-int length_cert = 0;
-*/
-////////////////////////////////////////////
+byte sm_key_pub[64] = { 0, };
+byte length_cert;
+
+mbedtls_x509_crt uff_cert;
+
 
 int osm_pmp_set(uint8_t perm)
 {
@@ -105,34 +111,75 @@ void sm_copy_key()
   sbi_memcpy(sm_public_key, sanctum_sm_public_key, PUBLIC_KEY_SIZE);
   sbi_memcpy(sm_private_key, sanctum_sm_secret_key, PRIVATE_KEY_SIZE);
   sbi_memcpy(dev_public_key, sanctum_dev_public_key, PUBLIC_KEY_SIZE);
-  /*
-  sbi_memcpy(cert_sm, sanctum_cert_sm, 64);
+  
+  sbi_printf("Dentro copia variabili\n");
+
+  sbi_memcpy(sm_key_pub, sanctum_sm_key_pub, 64);
   sbi_memcpy(CDI, sanctum_CDI, 64);
-  sbi_memcpy(ECA_pk, sanctum_ECA_pk, 64);
   sbi_memcpy(sm_hash_to_check, sanctum_sm_hash_to_check, 64);
-  sbi_memcpy(&length_cert, &sanctum_length_cert, 4);*/
-  /*
-  if ((ret = mbedtls_x509_crt_parse_der(&uff_cert, cert_real, effe_len_cert_der)) == 0){
-        printf("Parsing corretto\n");
+  sbi_memcpy(cert_sm, sanctum_cert_sm, sanctum_length_cert);
+  sbi_memcpy(ECA_pk, sanctum_ECA_pk, 64);
+  length_cert = sanctum_length_cert;
 
+  sbi_printf("CDI:\n");
+  for(int i = 0; i < 64; i ++){
+    sbi_printf("%02x", CDI[i]);
   }
-  printf("Stampa dopo lettura pubblica\n");
-    for(int i =0; i <32; i ++){
-        printf("%02x",uff_cert.pk.pk_ctx.pub_key[i]);//   pk_ctx->pub_key[i]);
-    }
-  printf("\n");
-  */
+  sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("ECA pk:\n");
+  for(int i = 0; i < 32; i ++){
+    sbi_printf("%02x", ECA_pk[i]);
+  }
+  sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("sm_hash_to_check:\n");
+  for(int i = 0; i < 64; i ++){
+    sbi_printf("%02x", sm_hash_to_check[i]);
+  }
+  sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("length_cert:");
+  sbi_printf("%d", length_cert);
+  sbi_printf("\n-------------------------------------------------\n");
 
+  sbi_printf("cert der format:\n");
+  for(int i = 0; i < length_cert; i ++){
+    sbi_printf("%02x", cert_sm[i]);
+  }
+  sbi_printf("\n-------------------------------------------------\n\n\n\n");
+  
+  if ((mbedtls_x509_crt_parse_der(&uff_cert, cert_sm, length_cert)) != 0){
+      sbi_printf("[SM] Error parsing the certificate created during the booting process");
+      sbi_hart_hang();
+  }
+
+  /*
+  * To check that the data read from the certificate is the correct one created in the booting stage
+  */
+  ///////////////////////////////////////////////////////////////////////////////
+  sbi_printf("sanctum_sm_key_pub from the booting stage\n");
+  for(int i = 0; i < 32; i ++){
+    sbi_printf("%02x", sm_key_pub[i]);
+  }
+  sbi_printf("\n-------------------------------------------------\n");
+  
+  sbi_printf("sanctum_sm_key_pub obtained parsing the der format cert\n");
+    for(int i =0; i <32; i ++){
+        sbi_printf("%02x",uff_cert.pk.pk_ctx.pub_key[i]);//   pk_ctx->pub_key[i]);
+    }
+  sbi_printf("\n\n\n\n");
+  ////////////////////////////////////////////////////////////////////////////////
 }
 
 void sm_print_hash()
-{
+{ 
+  /*
   sbi_printf("SM HASH\n-------------------------------------------------\n");
   for (int i=0; i<MDSIZE; i++)
   {
     sbi_printf("%02x", (char) sm_hash[i]);
   }
   sbi_printf("\n");
+
+  */
 }
 
 /*
@@ -167,10 +214,14 @@ void sm_init(bool cold_boot)
   if (cold_boot) {
     /* only the cold-booting hart will execute these */
     sbi_printf("[SM] Initializing ... hart [%lx]\n", csr_read(mhartid));
+    
 
     sbi_ecall_register_extension(&ecall_keystone_enclave);
 
     sm_region_id = smm_init();
+    
+    mbedtls_x509_crt_init(&uff_cert);
+
     if(sm_region_id < 0) {
       sbi_printf("[SM] intolerable error - failed to initialize SM memory");
       sbi_hart_hang();
@@ -188,6 +239,8 @@ void sm_init(bool cold_boot)
     }
     // Copy the keypair from the root of trust
     sm_copy_key();
+
+    //sbi_memset(&uff_cert, 0, sizeof(mbedtls_x509_crt));
 
     // Init the enclave metadata
     enclave_init_metadata();

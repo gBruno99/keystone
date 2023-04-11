@@ -40,23 +40,26 @@ typedef unsigned char byte;
 // Sanctum header fields in DRAM
 extern byte sanctum_dev_public_key[32];
 extern byte sanctum_dev_secret_key[64];
-unsigned int sanctum_sm_size = 0x1ff000;
 extern byte sanctum_sm_hash[64];
 extern byte sanctum_sm_public_key[32];
 extern byte sanctum_sm_secret_key[64];
 extern byte sanctum_sm_signature[64];
+
+extern byte sanctum_CDI[64];
+extern byte sanctum_ECA_pk[64];
+extern byte sanctum_sm_hash_to_check[64];
+extern byte sanctum_sm_key_pub[64];
+extern byte sanctum_cert_sm[256];
+extern int sanctum_length_cert;
+
+
+unsigned int sanctum_sm_size = 0x1ff000;
 
 /**
  * called (?) by bootloader.S at line 27 (secure boot)
  */
 
 #define DRAM_BASE 0x80000000
-
-extern byte sanctum_cert_sm[512];
-extern byte sanctum_CDI[64];
-extern byte sanctum_ECA_pk[64];
-extern byte sanctum_sm_hash_to_check[64];
-extern int sanctum_length_cert;
 
 /* Update this to generate valid entropy for target platform*/
 inline byte random_byte(unsigned int i)
@@ -85,7 +88,6 @@ void bootloader()
   byte sanctum_eca_key_pub[32];
 
   byte sanctum_sm_key_priv[64];
-  byte sanctum_sm_key_pub[32];
 
   byte sanctum_sm_signature_test[64];
 
@@ -147,9 +149,16 @@ void bootloader()
   sha3_init(&hash_ctx, 64);
   sha3_update(&hash_ctx, (void *)DRAM_BASE, sanctum_sm_size);
   sha3_final(sanctum_sm_hash, &hash_ctx);
+  
+
+  /*for(int i = 0; i < 64; i ++)
+    if(sanctum_sm_hash[i] != sanctum_sm_hash_to_check[i])
+      return 0;
+  */
+  
 
   // If the signature is modified, the verification goes wrong
-   sanctum_sm_signature_test[0] = random_byte(0);
+  //sanctum_sm_signature_test[0] = random_byte(0);
 
   // Verify the signature of the security monitor provided by the manufacturer
 
@@ -160,6 +169,8 @@ void bootloader()
     return 0;
   }
 
+  memcpy(sanctum_sm_hash_to_check, sanctum_sm_hash, 64);
+
   // All ok
   // Combine hash of the security monitor and the device root key to obtain the CDI
   sha3_init(&hash_ctx, 64);
@@ -168,13 +179,13 @@ void bootloader()
   sha3_final(sanctum_CDI, &hash_ctx);
 
   // The CDI is used to generate the keypair associated to the security monitor
-  ed25519_create_keypair(sanctum_CDI, sanctum_sm_key_priv, sanctum_sm_key_pub);
+  ed25519_create_keypair(sanctum_sm_key_pub, sanctum_sm_key_priv, sanctum_CDI);
 
   // The measure of the sm is signed with the device root key
   ed25519_sign(sanctum_sm_signature_drk, sanctum_sm_hash, sizeof(*sanctum_sm_hash), sanctum_device_root_key_pub, sanctum_device_root_key_priv);
 
   // Generating the key associated to the embedded CA
-  ed25519_create_keypair(sanctum_eca_key_pub, sanctum_eca_key_priv, sanctum_device_root_key_priv);
+  ed25519_create_keypair(sanctum_ECA_pk, sanctum_eca_key_priv, sanctum_device_root_key_priv);
 
   
   // Create the certificate structure mbedtls_x509write_cert to release the cert of the security monitor
@@ -245,11 +256,11 @@ void bootloader()
   
   unsigned char cert_der[512];
   size_t len_cert_der_tot = 512;
-  size_t effe_len_cert_der;
+  int effe_len_cert_der;
   
   
   // The structure mbedtls_x509write_cert is parsed to create a x509 cert in der format, signed and written in memory
-  ret = mbedtls_x509write_crt_der(&cert, cert_der, len_cert_der_tot, NULL, NULL);
+  ret = mbedtls_x509write_crt_der(&cert, cert_der, 512, NULL, NULL);
   if (ret != 0)
   {
     effe_len_cert_der = ret;
@@ -261,20 +272,13 @@ void bootloader()
   
   unsigned char *cert_real = cert_der;
   // effe_len_cert_der stands for the length of the cert, placed starting from the end of the buffer cert_der
-  int dif = 4096 - effe_len_cert_der;
+  int dif = 512 - effe_len_cert_der;
   // cert_real points to the starts of the cert in der format
   cert_real += dif;
   sanctum_length_cert = effe_len_cert_der;
-  memcpy(sanctum_cert_sm, cert_real, sanctum_length_cert);
+  memcpy(sanctum_cert_sm, cert_real, effe_len_cert_der);
 
-  /*
-
-  if (!(ret = mbedtls_x509_crt_parse_der(&uff_cert, cert_real, effe_len_cert_der)))
-  {
-    return 0;
-  }
-  */
-
+  //sanctum_length_cert = effe_len_cert_der;
 
 
   memset((void *)sanctum_sm_key_priv, 0, sizeof(*sanctum_sm_key_priv));
@@ -318,17 +322,3 @@ void bootloader()
 
  
 }
-
-
-/*
-extern byte device_root_key_priv[64];
-extern byte sign_sm[64];
-extern byte pub_key_manufacturer[64];
-
-
-//To be defined extern, they are needed by the sm
-extern byte sanctum_compound_devide_identifier[64];
-extern byte sanctum_eca_key_pub[32];
-extern byte sanctum_sm_signature_drk[64];
-extern byte sanctum_device_root_key_pub[64];
-*/

@@ -1,4 +1,4 @@
-#include "prova.h"
+#include "myString.h"
 #include "x509custom.h"
 #include "ed25519/ed25519.h"
 
@@ -7,6 +7,7 @@
 // strcmp riga 114
 // my_memcpy riga 150, 183
 
+/*
 static inline mbedtls_ed25519_context *mbedtls_pk_ed25519(const mbedtls_pk_context pk)
 {
     switch (mbedtls_pk_get_type(&pk)) {
@@ -16,6 +17,7 @@ static inline mbedtls_ed25519_context *mbedtls_pk_ed25519(const mbedtls_pk_conte
             return NULL;
     }
 }
+*/
 
 static const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name, size_t name_len)
 {

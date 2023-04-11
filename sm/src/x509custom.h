@@ -1,6 +1,8 @@
 
 #include <stddef.h>
 #include "oid_custom.h"
+#include "ed25519/ed25519.h"
+
 //#include <stdlib.h>
 //#include <stdio.h>
 //#include <stdint.h>
@@ -132,7 +134,7 @@ typedef __uint8_t uint8_t;
         (g) += ret;                                 \
     } while (0);
 
-inline int mbedtls_error_add(int high, int low,
+static inline int mbedtls_error_add(int high, int low,
                                     const char *file, int line)
 {
   /*
@@ -259,7 +261,7 @@ struct mbedtls_pk_info_t {
                            void *p_rng);
 
     /** Allocate a new context */
-    /*void * */ mbedtls_ed25519_context (*ctx_alloc_func)(void); //(void)
+    /*void  mbedtls_ed25519_context (*ctx_alloc_func)(void); //(void)*/
 
     /** Free the given context */
     void (*ctx_free_func)(void *ctx);
@@ -500,7 +502,7 @@ typedef struct {
 
 
 
-const x509_attr_descriptor_t x509_attrs[] =
+static const x509_attr_descriptor_t x509_attrs[] =
 {
     { ADD_STRLEN("CN"),
       MBEDTLS_OID_AT_CN, MBEDTLS_ASN1_UTF8_STRING },
@@ -570,7 +572,7 @@ int mbedtls_x509write_crt_set_validity(mbedtls_x509write_cert *ctx, const char *
 void mbedtls_pk_init(mbedtls_pk_context *ctx);     
 size_t ed25519_get_bitlen(const void *ctx);
 int ed25519_can_do(mbedtls_pk_type_t type);
-/*void*/ mbedtls_ed25519_context ed25519_alloc_wrap(void);
+void /*mbedtls_ed25519_context*/ ed25519_alloc_wrap(void);
 void ed25519_free_wrap(void *ctx);
 int mbedtls_ed25519_check_pub_priv(unsigned char* priv, unsigned char* pub, unsigned char* seed);
 int ed25519_check_pair_wrap(const void *pub, const void *prv, int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
@@ -601,7 +603,7 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx,
                               void *p_rng);
 int mbedtls_pk_write_pubkey_der(const mbedtls_pk_context *key, unsigned char *buf, size_t size);
 int mbedtls_pk_write_pubkey(unsigned char **p, unsigned char *start, const mbedtls_pk_context *key);     
-int pk_write_ed25519_pubkey(unsigned char **p, unsigned char *start, mbedtls_ed25519_context *ed25519);                       
+int pk_write_ed25519_pubkey(unsigned char **p, unsigned char *start, mbedtls_ed25519_context ed25519);                       
 int mbedtls_asn1_write_len(unsigned char **p, const unsigned char *start, size_t len);
 int mbedtls_asn1_write_tag(unsigned char **p, const unsigned char *start, unsigned char tag);
 int mbedtls_asn1_write_algorithm_identifier(unsigned char **p, const unsigned char *start,
