@@ -13,6 +13,7 @@
         "ed25519.h": "c",
         "enclave.h": "c",
         "crypto.h": "c",
-        "x509custom.h": "c"
+        "x509custom.h": "c",
+        "time.h": "c"
     }
 }

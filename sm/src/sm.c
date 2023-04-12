@@ -61,6 +61,7 @@ sha3_ctx_t ctx_hash;
 // Variable used for testing porpouse to pass data from the boot stage to the sm
 extern byte test[64];
 
+char* validation(mbedtls_x509_crt cert);
 
 int osm_pmp_set(uint8_t perm)
 {
@@ -168,7 +169,17 @@ void sm_copy_key()
     }
   sbi_printf("\n\n\n\n");
 
-   /**
+  char* str_ret = validation(uff_cert);
+  if(my_strlen(str_ret) != 0){
+    sbi_printf("[SM] Problem with the certificate: %s \n", str_ret);
+    sbi_hart_hang();
+
+  }
+  else 
+    sbi_printf("[SM] The certificate is formally correct, now let's verify the signature\n");
+
+
+  /**
    * Computing the hash to verify the signature of the certificate
    * 
   */
@@ -195,7 +206,7 @@ void sm_copy_key()
   sbi_printf("\n\n\n\n");
   */
 
-
+  
   /**
    * Verifying the signature
    * 
@@ -208,6 +219,8 @@ void sm_copy_key()
     sbi_printf("[SM] The signature of the certificate is ok\n\n\n\n\n");
 
   }
+
+  //uff_cert.valid_from
 
   /*
   * To check that the data read from the certificate is the correct one created in the booting stage
@@ -336,4 +349,24 @@ void sm_init(bool cold_boot)
   return;
   // for debug
   // sm_print_cert();
+}
+
+char* validation(mbedtls_x509_crt cert){
+
+  if(cert.ne_issue_arr == 0)
+    return "Problem with the issuer of the certificate";
+  if(cert.ne_subje_arr == 0)
+    return "Problem with the subject of the certificate";
+  if((cert.valid_from.day == 0) || (cert.valid_from.mon == 0) || (cert.valid_from.day == 0))
+    return "Problem with the valid_from field of the certificate";
+  if((cert.valid_to.day == 0) || (cert.valid_to.mon == 0) || (cert.valid_to.day == 0))
+    return "Problem with the valid_to field of the certificate";
+  if(cert.pk.pk_ctx.len != 32)
+    return "Problem with the pk length of the certificate";
+  if(cert.serial.len == 0)
+    return "Problem with the serial length of the certificate";
+  if(cert.sig.len == 0)
+    return "Problem with the signature length of the certificate";
+  return "";
+
 }

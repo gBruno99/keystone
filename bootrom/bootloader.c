@@ -200,6 +200,7 @@ void bootloader()
   }
   
   // Setting the name of the subject of the cert
+  
   ret = mbedtls_x509write_crt_set_subject_name_mod(&cert, "O=Security Monitor");
   if (ret != 0)
   {

@@ -1,6 +1,8 @@
 #include "string.h"
 #include "x509custom.h"
 #include "ed25519/ed25519.h"
+#include "sha3/sha3.h"
+
 
 
 //////////////////////////////////////////////////////////////////////
@@ -133,14 +135,15 @@ int mbedtls_ed25519_write_signature_restartable(mbedtls_ed25519_context *ctx,
                                               mbedtls_ed25519_restart_ctx *rs_ctx)
 {
 
-    //unsigned char* app_sign[64];
-    //ed25519_sign(app_sign, hash, sizeof(hash), ctx->pub_key, ctx->priv_key);
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char buf[256] = { 0 };
-    unsigned char *p = buf + sizeof(buf);
-    size_t len = 0;
-    ed25519_sign(sig, hash, sizeof(hash), ctx->pub_key, ctx->priv_key);
+ //ed25519_sign(app_sign, hash, sizeof(hash), ctx->pub_key, ctx->priv_key);
+    //int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    //unsigned char buf[64] = { 0 };
+    //unsigned char *p = buf + sizeof(buf);
+    //size_t len =  0;
+    //unsigned char sign_no_tag[64];
+    //ed25519_sign(sign_no_tag, hash, sizeof(hash), ctx->pub_key, ctx->priv_key);
     /*
+    unsigned char* app_sign[64];
     unsigned char app_sign_test[] = {   0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 
                                     0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9,
                                     0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9,
@@ -149,31 +152,32 @@ int mbedtls_ed25519_write_signature_restartable(mbedtls_ed25519_context *ctx,
                                     0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9,
                                     0x0, 0x1, 0x2, 0x3
                                 };
-                                */
+                                
 
 
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_raw_buffer(&p, buf,
-                                                            (const unsigned char *) sig, 64));
+                                                            (const unsigned char *) sign_no_tag, sizeof(sign_no_tag)));
 
 
     //MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&p, buf, len));
     //MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&p, buf, MBEDTLS_ASN1_BIT_STRING));
-    /*
+    
     if (len > sig_size) {
         return MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL;
     }
-    */
+    
 
-    my_memcpy(sig, p, len);
-    *slen = len;
-    /*
+    //my_memcpy(sig, p, len);
+    
     printf("FIRMA OID\n");
     for(int i =0; i <*slen; i ++){
         printf("%02x-",sig[i]);
     }
     printf("\n");
     */
-   return 0;
+    ed25519_sign(sig, hash, sizeof(hash), ctx->pub_key, ctx->priv_key);
+    *slen = 64;
+    return 0;
 
 }
 
@@ -572,19 +576,21 @@ int mbedtls_ed25519_check_pub_priv(unsigned char* priv, unsigned char* pub, unsi
 }
 
 int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, size_t size,
-                                int (*f_rng)(void *, unsigned char *, size_t), void *p_rng){
+                                int (*f_rng)(void *, unsigned char *, size_t), void *p_rng){//, unsigned char* test){
     
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const char *sig_oid = NULL;
     size_t sig_oid_len = 0;
     unsigned char *c, *c2;
     unsigned char sig[100];
-    size_t hash_length = 0;
+    //size_t hash_length = 0;
     unsigned char hash[64];
 
     size_t sub_len = 0, pub_len = 0, sig_and_oid_len = 0, sig_len;
     size_t len = 0;
     mbedtls_pk_type_t pk_alg;
+
+    sha3_ctx_t hash_ctx;
 
     /*
      * Prepare data to be signed at the end of the target buffer
@@ -749,14 +755,25 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
         sha3_update(&hash_ctx, c, len);
         sha3_final(hash, &hash_ctx);
      * 
-     * */             
+     * */    
+
+    sha3_init(&hash_ctx, 64);
+    sha3_update(&hash_ctx, c, len);
+    sha3_final(hash, &hash_ctx);  
+
+     //for(int i = 0; i < 64; i ++)
+      //  test[i] = hash[i];
+   // my_memcpy(test, hash, 64);
+    /*
     if ((ret = mbedtls_pk_sign(ctx->issuer_key, ctx->md_alg,
                                hash, hash_length, sig, sizeof(sig), &sig_len,
                                f_rng, p_rng)) != 0) {
         return ret;
-    }     
+    } 
+    */           
 
-    //sig_len = 64;
+    ed25519_sign(sig, hash, 64, ctx->issuer_key->pk_ctx.pub_key, ctx->issuer_key->pk_ctx.priv_key);
+    sig_len = 64;
 
     /* Move CRT to the front of the buffer to have space
      * for the signature. */
@@ -768,7 +785,7 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
      * into the CRT buffer. */
     c2 = buf + size;
     if(sig_oid != NULL){
-    MBEDTLS_ASN1_CHK_ADD(sig_and_oid_len, mbedtls_x509_write_sig(&c2, c,
+        MBEDTLS_ASN1_CHK_ADD(sig_and_oid_len, mbedtls_x509_write_sig(&c2, c,
                                                                  sig_oid, sig_oid_len, sig,
                                                                  sig_len));                       
     }
@@ -1240,7 +1257,7 @@ void mbedtls_x509write_crt_set_md_alg(mbedtls_x509write_cert *ctx,
     ctx->md_alg = md_alg;
 }
 
-int mbedtls_x509_crt_parse_der(mbedtls_x509_crt *chain, const unsigned char *buf,size_t buflen)
+int mbedtls_x509_crt_parse_der(mbedtls_x509_crt *chain, unsigned char *buf,size_t buflen)
 {
     return mbedtls_x509_crt_parse_der_internal(chain, buf, buflen, 1, NULL, NULL);
 }
@@ -1249,7 +1266,7 @@ int mbedtls_x509_crt_parse_der(mbedtls_x509_crt *chain, const unsigned char *buf
  * Parse one X.509 certificate in DER format from a buffer and add them to a
  * chained list
  */
-int mbedtls_x509_crt_parse_der_internal(mbedtls_x509_crt *chain, const unsigned char *buf, size_t buflen, int make_copy,
+int mbedtls_x509_crt_parse_der_internal(mbedtls_x509_crt *chain, unsigned char *buf, size_t buflen, int make_copy,
                                                mbedtls_x509_crt_ext_cb_t cb, void *p_ctx)
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -1309,7 +1326,7 @@ void mbedtls_x509_crt_init(mbedtls_x509_crt *crt)
  * Parse and fill a single X.509 certificate in DER format
  */
 int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
-                                   const unsigned char *buf,
+                                unsigned char *buf,
                                    size_t buflen,
                                    int make_copy,
                                    mbedtls_x509_crt_ext_cb_t cb,
@@ -1360,8 +1377,9 @@ int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
 
         memcpy(crt->raw.p, buf, crt->raw.len);
         */
-        my_memcpy(crt->raw.p_arr, buf, crt->raw.len);
-        p = crt->raw.p_arr;
+        //my_memcpy(crt->raw.p_arr, buf, crt->raw.len);
+        crt->raw.p = buf;
+        p = crt->raw.p;
         crt->own_buffer = 1;
 
         p += crt->raw.len - len;
@@ -1408,9 +1426,9 @@ int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
 
     crt->version++;
 
-    if ((ret = mbedtls_x509_get_sig_alg(&crt->sig_oid, &sig_params1,
+    if ((ret = mbedtls_x509_get_sig_alg_mod(&crt->sig_oid, &sig_params1,
                                         &crt->sig_md, &crt->sig_pk,
-                                        &crt->sig_opts)) != 0) {
+                                        &crt->sig_opts)) != 0) { //versione normale
         //mbedtls_x509_crt_free(crt);
         return ret;
     }
@@ -1556,7 +1574,7 @@ int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
      */
      end = crt_end;
 
-    if ((ret = mbedtls_x509_get_alg(&p, end, &sig_oid2, &sig_params2)) != 0) {
+    if ((ret = mbedtls_x509_get_alg_mod(&p, end, &sig_oid2, &sig_params2)) != 0) { //versione normale
         //mbedtls_x509_crt_free(crt);
         return ret;
     }
@@ -1792,7 +1810,7 @@ int x509_get_version(unsigned char **p,
 }
 
 int mbedtls_x509_get_serial(unsigned char **p, const unsigned char *end,
-                            mbedtls_x509_buf *serial)
+                            mbedtls_x509_buf_crt *serial)
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
@@ -1820,12 +1838,72 @@ int mbedtls_x509_get_serial(unsigned char **p, const unsigned char *end,
 }
 
 int mbedtls_x509_get_alg(unsigned char **p, const unsigned char *end,
+                         mbedtls_x509_buf_crt *alg, mbedtls_x509_buf *params)
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if ((ret = mbedtls_asn1_get_alg_mod(p, end, alg, params)) != 0) {
+        return MBEDTLS_ERROR_ADD(MBEDTLS_ERR_X509_INVALID_ALG, ret);
+    }
+
+    return 0;
+}
+
+int mbedtls_x509_get_alg_mod(unsigned char **p, const unsigned char *end,
                          mbedtls_x509_buf *alg, mbedtls_x509_buf *params)
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     if ((ret = mbedtls_asn1_get_alg(p, end, alg, params)) != 0) {
         return MBEDTLS_ERROR_ADD(MBEDTLS_ERR_X509_INVALID_ALG, ret);
+    }
+
+    return 0;
+}
+
+int mbedtls_asn1_get_alg_mod(unsigned char **p,
+                         const unsigned char *end,
+                         mbedtls_asn1_buf_no_arr *alg, mbedtls_asn1_buf *params)
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    size_t len;
+
+    if ((ret = mbedtls_asn1_get_tag(p, end, &len,
+                                    MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)) != 0) {
+        return ret;
+    }
+
+    if ((end - *p) < 1) {
+        return MBEDTLS_ERR_ASN1_OUT_OF_DATA;
+    }
+
+    alg->tag = **p;
+    end = *p + len;
+
+    if ((ret = mbedtls_asn1_get_tag(p, end, &alg->len, MBEDTLS_ASN1_OID)) != 0) {
+        return ret;
+    }
+
+    alg->p = *p;
+    *p += alg->len;
+
+    if (*p == end) {
+        //mbedtls_platform_zeroize(params, sizeof(mbedtls_asn1_buf));
+        return 0;
+    }
+
+    params->tag = **p;
+    (*p)++;
+
+    if ((ret = mbedtls_asn1_get_len(p, end, &params->len)) != 0) {
+        return ret;
+    }
+
+    params->p = *p;
+    *p += params->len;
+
+    if (*p != end) {
+        return MBEDTLS_ERR_ASN1_LENGTH_MISMATCH;
     }
 
     return 0;
@@ -1879,10 +1957,12 @@ int mbedtls_asn1_get_alg(unsigned char **p,
     return 0;
 }
 
+
 /*
  * Get signature algorithm from alg OID and optional parameters
  */
-int mbedtls_x509_get_sig_alg(const mbedtls_x509_buf *sig_oid, const mbedtls_x509_buf *sig_params,
+/*
+int mbedtls_x509_get_sig_alg(const mbedtls_x509_buf_crt *sig_oid, const mbedtls_x509_buf_crt *sig_params,
                              mbedtls_md_type_t *md_alg, mbedtls_pk_type_t *pk_alg,
                              void **sig_opts)
 {
@@ -1894,7 +1974,7 @@ int mbedtls_x509_get_sig_alg(const mbedtls_x509_buf *sig_oid, const mbedtls_x509
 
     *pk_alg = MBEDTLS_PK_ED25519;
     *md_alg = MBEDTLS_MD_SHA384;
-    /*
+    
     if ((ret = mbedtls_oid_get_sig_alg(sig_oid, md_alg, pk_alg)) != 0) {
         return MBEDTLS_ERROR_ADD(MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG, ret);
     }
@@ -1927,10 +2007,29 @@ int mbedtls_x509_get_sig_alg(const mbedtls_x509_buf *sig_oid, const mbedtls_x509
             return MBEDTLS_ERR_X509_INVALID_ALG;
         }
     }
-    */
+    
 
     return 0;
 }
+*/
+
+int mbedtls_x509_get_sig_alg_mod(const mbedtls_x509_buf_crt *sig_oid, const mbedtls_x509_buf *sig_params,
+                             mbedtls_md_type_t *md_alg, mbedtls_pk_type_t *pk_alg,
+                             void **sig_opts)
+{
+    //int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if (*sig_opts != NULL) {
+        return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
+    }
+
+    *pk_alg = MBEDTLS_PK_ED25519;
+    *md_alg = MBEDTLS_MD_SHA384;
+
+    return 0;
+}
+
+
 
 /*
 int mbedtls_x509_get_name(unsigned char **p, const unsigned char *end,

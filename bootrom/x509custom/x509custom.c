@@ -20,7 +20,7 @@ static inline mbedtls_ed25519_context *mbedtls_pk_ed25519(const mbedtls_pk_conte
 }
 */
 
-static const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name, size_t name_len)
+const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name, size_t name_len)
 {
     const x509_attr_descriptor_t *cur;
 
@@ -37,12 +37,12 @@ static const x509_attr_descriptor_t *x509_attr_descr_from_name(const char *name,
     return cur;
 }
 
-static size_t ed25519_get_bitlen(const void *ctx)
+size_t ed25519_get_bitlen(const void *ctx)
 {
-    const mbedtls_ed25519_context *rsa = (const mbedtls_ed25519_context *) ctx;
+    //const mbedtls_ed25519_context *rsa = (const mbedtls_ed25519_context *) ctx;
     return 8 * 32;
 }
-static int ed25519_can_do(mbedtls_pk_type_t type)
+int ed25519_can_do(mbedtls_pk_type_t type)
 {
     return type == MBEDTLS_PK_ED25519;
 }
@@ -57,7 +57,8 @@ void mbedtls_ed25519_init(mbedtls_ed25519_context *ctx)
     //memset(ctx->pub_key, 0, 32);
 }
 
-/*void*/ mbedtls_ed25519_context ed25519_alloc_wrap(void)
+/*
+void mbedtls_ed25519_context ed25519_alloc_wrap(void)
 {   
     //void *ctx = mbedtls_calloc(1, sizeof(mbedtls_ed25519_context));
     struct mbedtls_ed25519_context ctx;
@@ -70,13 +71,14 @@ void mbedtls_ed25519_init(mbedtls_ed25519_context *ctx)
 
     return ctx;
 }
+*/
 
-static void ed25519_free_wrap(void *ctx)
+void ed25519_free_wrap(void *ctx)
 {
     mbedtls_ed25519_free((mbedtls_ed25519_context *) ctx);
     //mbedtls_free(ctx);
 }
-static int ed25519_check_pair_wrap(const void *pub, const void *prv,
+int ed25519_check_pair_wrap(const void *pub, const void *prv,
                                int (*f_rng)(void *, unsigned char *, size_t),
                                void *p_rng)
 { 
@@ -91,7 +93,7 @@ static int ed25519_check_pair_wrap(const void *pub, const void *prv,
                                       ((mbedtls_ed25519_context *)pub)->pub_key,
                                       (unsigned char *)prv);
 }
-static int ed25519_encrypt_wrap(void *ctx,
+int ed25519_encrypt_wrap(void *ctx,
                             const unsigned char *input, size_t ilen,
                             unsigned char *output, size_t *olen, size_t osize,
                             int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
@@ -107,7 +109,7 @@ static int ed25519_encrypt_wrap(void *ctx,
 
 
 
-static int ed25519_decrypt_wrap(void *ctx,
+ int ed25519_decrypt_wrap(void *ctx,
                             const unsigned char *input, size_t ilen,
                             unsigned char *output, size_t *olen, size_t osize,
                             int (*f_rng)(void *, unsigned char *, size_t), void *p_rng){
@@ -117,6 +119,7 @@ static int ed25519_decrypt_wrap(void *ctx,
                              * 
                              * 
                             */
+                           return 0;
                             }
 
 int mbedtls_ed25519_write_signature_restartable(mbedtls_ed25519_context *ctx,
@@ -218,7 +221,7 @@ const mbedtls_pk_info_t mbedtls_ed25519_info = {
     ed25519_decrypt_wrap,
     ed25519_encrypt_wrap,
     ed25519_check_pair_wrap,
-    ed25519_alloc_wrap,
+    //ed25519_alloc_wrap,
     ed25519_free_wrap,
 };
 
@@ -496,7 +499,7 @@ int pk_set_ed25519privkey(unsigned char **p, mbedtls_ed25519_context *ed25519){
 
 int mbedtls_pk_parse_public_key(mbedtls_pk_context *ctx, const unsigned char *key, size_t keylen, int type_k){
     
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    //int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *p;
     const mbedtls_pk_info_t *pk_info;
     if ((pk_info = mbedtls_pk_info_from_type(MBEDTLS_PK_ED25519)) == NULL) {
@@ -516,13 +519,13 @@ int mbedtls_pk_parse_public_key(mbedtls_pk_context *ctx, const unsigned char *ke
     p = (unsigned char *) key; 
     
     if(type_k == 0){
-        ret = pk_set_ed25519pubkey(&p, &ctx->pk_ctx );//mbedtls_pk_ed25519(*ctx));
+        pk_set_ed25519pubkey(&p, &ctx->pk_ctx );//mbedtls_pk_ed25519(*ctx));
         /*for(int i = 0; i < 32; i++){
             ctx->pk_ctx->pub_key[i] = p[i];
         } 
         ctx->pk_ctx->len = 32;*/
      } else
-        ret = pk_set_ed25519privkey(&p,&ctx->pk_ctx);//mbedtls_pk_ed25519(*ctx));
+        pk_set_ed25519privkey(&p,&ctx->pk_ctx);//mbedtls_pk_ed25519(*ctx));
     return 0;
 }
 
@@ -573,7 +576,7 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
                                 int (*f_rng)(void *, unsigned char *, size_t), void *p_rng){//, unsigned char* test){
     
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    const char *sig_oid;
+    const char *sig_oid = NULL;
     size_t sig_oid_len = 0;
     unsigned char *c, *c2;
     unsigned char sig[100];
@@ -691,7 +694,7 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
      */
     MBEDTLS_ASN1_CHK_ADD(len,
                          mbedtls_asn1_write_algorithm_identifier(&c, buf,
-                                                                 sig_oid, my_strlen(sig_oid), 0));
+                                                                 sig_oid, sig_oid_len, 0));
     /*
      *  Serial   ::=  INTEGER
      *
@@ -778,10 +781,11 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
      * making sure that it doesn't underflow
      * into the CRT buffer. */
     c2 = buf + size;
-    MBEDTLS_ASN1_CHK_ADD(sig_and_oid_len, mbedtls_x509_write_sig(&c2, c,
+    if(sig_oid != NULL){
+        MBEDTLS_ASN1_CHK_ADD(sig_and_oid_len, mbedtls_x509_write_sig(&c2, c,
                                                                  sig_oid, sig_oid_len, sig,
                                                                  sig_len));                       
-    
+    }
     /*
      * Memory layout after this step:
      *
@@ -876,7 +880,7 @@ int mbedtls_pk_write_pubkey_der(const mbedtls_pk_context *key, unsigned char *bu
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *c;
     size_t len = 0, par_len = 0, oid_len;
-    mbedtls_pk_type_t pk_type;
+    //mbedtls_pk_type_t pk_type;
     const char *oid;
 
     if (size == 0) {
@@ -902,7 +906,7 @@ int mbedtls_pk_write_pubkey_der(const mbedtls_pk_context *key, unsigned char *bu
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, buf, len));
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, buf, MBEDTLS_ASN1_BIT_STRING));
 
-    pk_type = mbedtls_pk_get_type(key);
+    //pk_type = mbedtls_pk_get_type(key);
 
     oid = "{0x2B, 0x65, 0x70}";
     oid_len = 3;
@@ -928,7 +932,7 @@ int mbedtls_pk_write_pubkey(unsigned char **p, unsigned char *start, const mbedt
 
 int pk_write_ed25519_pubkey(unsigned char **p, unsigned char *start, mbedtls_ed25519_context ed25519){
 
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    //int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 32;
     unsigned char buf[32];
     /*
@@ -1370,8 +1374,9 @@ int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
 
         memcpy(crt->raw.p, buf, crt->raw.len);
         */
-        my_memcpy(crt->raw.p_arr, buf, crt->raw.len);
-        p = crt->raw.p_arr;
+        //my_memcpy(crt->raw.p_arr, buf, crt->raw.len);
+        crt->raw.p = buf;
+        p = crt->raw.p;
         crt->own_buffer = 1;
 
         p += crt->raw.len - len;
@@ -1896,7 +1901,7 @@ int mbedtls_x509_get_sig_alg(const mbedtls_x509_buf *sig_oid, const mbedtls_x509
                              mbedtls_md_type_t *md_alg, mbedtls_pk_type_t *pk_alg,
                              void **sig_opts)
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    //int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     if (*sig_opts != NULL) {
         return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
@@ -2513,15 +2518,15 @@ int mbedtls_x509write_crt_set_extension(mbedtls_x509write_cert *ctx,
 int mbedtls_x509_set_extension(mbedtls_asn1_named_data *head, const char *oid, size_t oid_len,
                                int critical, const unsigned char *val, size_t val_len, int *ne)
 {
-    mbedtls_asn1_named_data *cur;
-
-    if ((/*cur =*/ mbedtls_asn1_store_named_data_mod(head, oid, oid_len,
+    //mbedtls_asn1_named_data *cur;
+    int pos;
+    if ((/*cur =*/ pos = mbedtls_asn1_store_named_data_mod(head, oid, oid_len,
                                              NULL, val_len + 1, ne)) == 0) {
         return MBEDTLS_ERR_X509_ALLOC_FAILED;
     }
 
-    cur->val.p[0] = critical;
-    my_memcpy(cur->val.p + 1, val, val_len);
+    head[pos].val.p[0] = critical;
+    my_memcpy(head[pos].val.p + 1, val, val_len);
 
     return 0;
 }
@@ -2529,7 +2534,7 @@ int mbedtls_x509_set_extension(mbedtls_asn1_named_data *head, const char *oid, s
 /*
  * X.509 v2/v3 unique identifier (not parsed)
  */
-static int x509_get_uid(unsigned char **p,
+int x509_get_uid(unsigned char **p,
                         const unsigned char *end,
                         mbedtls_x509_buf *uid, int n)
 {
@@ -2698,6 +2703,7 @@ int asn1_find_named_data_mod(mbedtls_asn1_named_data *list,const char *oid, size
     }
     if(i == ne)
         return 0;
+    return 0;
     //return list;
 }
 
