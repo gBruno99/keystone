@@ -17,7 +17,7 @@
 #include "sha3/sha3.h"
 
 #include "x509custom.h"
-
+#define DRAM_BASE 0x80000000
 
 static int sm_init_done = 0;
 static int sm_region_id = 0, os_region_id = 0;
@@ -41,6 +41,9 @@ extern byte sanctum_sm_key_pub[64];
 extern byte sanctum_cert_sm[256];
 extern int sanctum_length_cert;
 
+extern byte sanctum_sm_signature_drk[64];
+extern byte sanctum_device_root_key_pub[64];
+
 byte sm_hash[MDSIZE] = { 0, };
 byte sm_signature[SIGNATURE_SIZE] = { 0, };
 byte sm_public_key[PUBLIC_KEY_SIZE] = { 0, };
@@ -53,6 +56,9 @@ byte sm_hash_to_check[64] = { 0, };
 byte sm_key_pub[64] = { 0, };
 byte length_cert;
 
+byte sm_signature_drk[64] = {0,};
+byte device_root_key_pub[64] = {0,};
+
 mbedtls_x509_crt uff_cert;
 
 byte hash_for_verification[64];
@@ -61,7 +67,12 @@ sha3_ctx_t ctx_hash;
 // Variable used for testing porpouse to pass data from the boot stage to the sm
 extern byte test[64];
 
+unsigned int sanctum_sm_size = 0x1ff000;
+
+
 char* validation(mbedtls_x509_crt cert);
+
+
 
 int osm_pmp_set(uint8_t perm)
 {
@@ -127,6 +138,8 @@ void sm_copy_key()
   sbi_memcpy(sm_hash_to_check, sanctum_sm_hash_to_check, 64);
   sbi_memcpy(cert_sm, sanctum_cert_sm, sanctum_length_cert);
   sbi_memcpy(ECA_pk, sanctum_ECA_pk, 64);
+  sbi_memcpy(sm_signature_drk, sanctum_sm_signature_drk, 64);
+  sbi_memcpy(device_root_key_pub, sanctum_device_root_key_pub, 64);
   length_cert = sanctum_length_cert;
 
   sbi_printf("CDI:\n");
@@ -144,6 +157,17 @@ void sm_copy_key()
     sbi_printf("%02x", sm_hash_to_check[i]);
   }
   sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("sm_signature_drk:\n");
+  for(int i = 0; i < 64; i ++){
+    sbi_printf("%02x", sm_signature_drk[i]);
+  }
+  sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("device_root_key_pub:\n");
+  for(int i = 0; i < 32; i ++){
+    sbi_printf("%02x", device_root_key_pub[i]);
+  }
+  sbi_printf("\n-------------------------------------------------\n");
+  
   sbi_printf("length_cert:");
   sbi_printf("%d", length_cert);
   sbi_printf("\n-------------------------------------------------\n");
@@ -179,6 +203,7 @@ void sm_copy_key()
     sbi_printf("[SM] The certificate is formally correct, now let's verify the signature\n");
 
 
+ 
   /**
    * Computing the hash to verify the signature of the certificate
    * 
@@ -212,31 +237,54 @@ void sm_copy_key()
    * 
   */
   if(ed25519_verify(uff_cert.sig.p, hash_for_verification, 64, ECA_pk) == 0){
-    sbi_printf("[SM] Error verifying the signature of the certificate\n\n\n\n\n");
+    sbi_printf("[SM] Error verifying the signature of the certificate\n");
     sbi_hart_hang();
   }
   else{
-    sbi_printf("[SM] The signature of the certificate is ok\n\n\n\n\n");
+    sbi_printf("[SM] The signature of the certificate is ok\n");
 
   }
 
-  //uff_cert.valid_from
+  /**
+   * Checking the measure made by the boot of the SM
+   */
+    /*
+    sha3_init(&ctx_hash, 64);
+    sha3_update(&ctx_hash, (void *)DRAM_BASE, sanctum_sm_size);
+    sha3_final(hash_for_verification, &ctx_hash);
+  */
+
+
+    if ((ed25519_verify(sm_signature_drk, sm_hash_to_check, 64, device_root_key_pub)) == 0)
+    {
+      sbi_printf("[SM] Error verifying the signature of the SM measure made during the boot\n");
+      sbi_hart_hang();
+    }
+    else
+    {
+      sbi_printf("[SM] The signature of the SM measure made during the boot is correct\n\n");
+    }
+
+
 
   /*
   * To check that the data read from the certificate is the correct one created in the booting stage
   */
   ///////////////////////////////////////////////////////////////////////////////
+  sbi_printf("-----------------------------------------------------------------------------------------\n");
+  sbi_printf("Comparing what is parsed from the cert and what is directly passed from the booting stage\n");
+  sbi_printf("-----------------------------------------------------------------------------------------\n");
   sbi_printf("sanctum_sm_key_pub from the booting stage\n");
   for(int i = 0; i < 32; i ++){
     sbi_printf("%02x", sm_key_pub[i]);
   }
-  sbi_printf("\n-------------------------------------------------\n");
-  
+  sbi_printf("\n\n");
   sbi_printf("sanctum_sm_key_pub obtained parsing the der format cert\n");
     for(int i =0; i <32; i ++){
         sbi_printf("%02x",uff_cert.pk.pk_ctx.pub_key[i]);//   pk_ctx->pub_key[i]);
     }
-  sbi_printf("\n\n\n\n");
+  sbi_printf("\n");
+  sbi_printf("-----------------------------------------------------------------------------------------\n");
 
   ////////////////////////////////////////////////////////////////////////////////
   
