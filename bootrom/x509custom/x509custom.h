@@ -1,3 +1,5 @@
+#ifndef __X509CUSTOM_H__
+#define __X509CUSTOM_H__
 
 #include <stddef.h>
 #include "oid_custom.h"
@@ -709,4 +711,5 @@ int mbedtls_x509_get_alg_mod(unsigned char **p, const unsigned char *end,
 int mbedtls_x509_get_sig_alg_mod(const mbedtls_x509_buf_crt *sig_oid, const mbedtls_x509_buf *sig_params,
                              mbedtls_md_type_t *md_alg, mbedtls_pk_type_t *pk_alg,
                              void **sig_opts);
+#endif
   

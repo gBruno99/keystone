@@ -12,6 +12,9 @@
 #include <sbi/riscv_asm.h>
 #include <sbi/riscv_locks.h>
 #include <sbi/sbi_console.h>
+#include "sha3/sha3.h"
+#include "sm.h"
+#include "ed25519/ed25519.h"
 
 #define ENCL_MAX  16
 
@@ -23,6 +26,12 @@ static spinlock_t encl_lock = SPIN_LOCK_INITIALIZER;
 extern void save_host_regs(void);
 extern void restore_host_regs(void);
 extern byte dev_public_key[PUBLIC_KEY_SIZE];
+
+extern byte CDI[64];
+extern byte ECASM_pk[64];
+extern byte ECASM_priv[64];
+
+sha3_ctx_t hash_ctx_to_use;
 
 /****************************
  *
@@ -411,6 +420,84 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   /* Validate memory, prepare hash and signature for attestation */
   spin_lock(&encl_lock); // FIXME This should error for second enter.
   ret = validate_and_hash_enclave(&enclaves[eid]);
+
+  sha3_init(&hash_ctx_to_use, 64);
+  sha3_update(&hash_ctx_to_use, CDI, 64);
+  sha3_update(&hash_ctx_to_use, enclaves[eid].hash, 64);
+  sha3_final(enclaves[eid].CDI, &hash_ctx_to_use);
+
+  ed25519_create_keypair(enclaves[eid].local_att_pub, enclaves[eid].local_att_priv, enclaves[eid].CDI);
+
+  mbedtls_x509write_crt_init(&enclaves[eid].crt_local_att);
+
+  // Setting the name of the issuer of the cert
+  
+  ret = mbedtls_x509write_crt_set_issuer_name_mod(&enclaves[eid].crt_local_att, "O=Security Monitor");
+  if (ret != 0)
+  {
+    return 0;
+  }
+  
+  // Setting the name of the subject of the cert
+  
+  ret = mbedtls_x509write_crt_set_subject_name_mod(&enclaves[eid].crt_local_att, "O=Enclave" );
+  if (ret != 0)
+  {
+    return 0;
+  }
+
+  // pk context used to embed the keys of the security monitor
+  mbedtls_pk_context subj_key;
+  mbedtls_pk_init(&subj_key);
+
+  // pk context used to embed the keys of the embedded CA
+  mbedtls_pk_context issu_key;
+  mbedtls_pk_init(&issu_key);
+
+  
+  // Parsing the private key of the embedded CA that will be used to sign the certificate of the security monitor
+  ret = mbedtls_pk_parse_public_key(&issu_key, ECASM_priv, 64, 1);
+  if (ret != 0)
+  {
+    return 0;
+  }
+
+  ret = mbedtls_pk_parse_public_key(&issu_key, ECASM_pk, 32, 0);
+  if (ret != 0)
+  {
+    return 0;
+  }
+
+  // Parsing the public key of the security monitor that will be inserted in its certificate 
+  ret = mbedtls_pk_parse_public_key(&subj_key, enclaves[eid].local_att_pub, 32, 0);
+  if (ret != 0)
+  {
+    return 0;
+  }
+
+  // Variable  used to specify the serial of the cert
+  unsigned char serial[] = {"0x0, 0x0, 0x0"};
+  serial[2] = eid + '0';
+  
+  // The public key of the security monitor is inserted in the structure
+  mbedtls_x509write_crt_set_subject_key(&enclaves[eid].crt_local_att, &subj_key);
+
+  // The private key of the embedded CA is used later to sign the cert
+  mbedtls_x509write_crt_set_issuer_key(&enclaves[eid].crt_local_att, &issu_key);
+  
+  // The serial of the cert is setted
+  mbedtls_x509write_crt_set_serial_raw(&enclaves[eid].crt_local_att, serial, 3);
+  
+  // The algoithm used to do the hash for the signature is specified
+  mbedtls_x509write_crt_set_md_alg(&enclaves[eid].crt_local_att, MBEDTLS_MD_SHA512);
+  
+  // The validity of the crt is specified
+  ret = mbedtls_x509write_crt_set_validity(&enclaves[eid].crt_local_att, "20220101000000", "20230101000000");
+  if (ret != 0)
+  {
+    return 0;
+  }
+
   /* The enclave is fresh if it has been validated and hashed but not run yet. */
   if (ret)
     goto unlock;

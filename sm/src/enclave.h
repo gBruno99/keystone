@@ -13,6 +13,7 @@
 #include "pmp.h"
 #include "thread.h"
 #include "crypto.h"
+#include "x509custom.h"
 
 // Special target platform header, set by configure script
 #include TARGET_PLATFORM_HEADER
@@ -72,6 +73,11 @@ struct enclave
   /* measurement */
   byte hash[MDSIZE];
   byte sign[SIGNATURE_SIZE];
+
+  byte CDI[64];
+  byte local_att_pub[32];
+  byte local_att_priv[64];
+  mbedtls_x509write_cert crt_local_att;
 
   /* parameters */
   struct runtime_va_params_t params;
