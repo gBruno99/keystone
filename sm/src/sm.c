@@ -29,35 +29,47 @@ extern byte sanctum_sm_secret_key[PRIVATE_KEY_SIZE];
 extern byte sanctum_sm_public_key[PUBLIC_KEY_SIZE];
 extern byte sanctum_dev_public_key[PUBLIC_KEY_SIZE];
 
+
+
 extern byte sanctum_CDI[64];
+extern byte sanctum_ECASM_pk[64];
+extern byte sanctum_device_root_key_pub[64];
+extern byte sanctum_cert_sm[256];
+extern int sanctum_length_cert;
+
+byte CDI[64] = { 0, };
+byte ECASM_pk[64] = { 0, };
+byte device_root_key_pub[64] = {0,};
+byte cert_sm[256] = { 0, };
+byte length_cert;
+
+byte ECASM_priv[64];
+
+//extern byte sanctum_sm_hash_to_check[64];
+
 // the pk of the ECA is only 32bytes, but according to the alignment of the memory, it has to be of 64 bytes
-extern byte sanctum_ECA_pk[64];
-extern byte sanctum_sm_hash_to_check[64];
 /*
 * Variable used to verify that the public key of the sm created during the boot is the same key obtained after the
 * parsing of the certificate in der format
 */
-extern byte sanctum_sm_key_pub[64];
-extern byte sanctum_cert_sm[256];
-extern int sanctum_length_cert;
+//extern byte sanctum_sm_key_pub[64];
+//extern byte sanctum_ECA_pk[64];
 
-extern byte sanctum_sm_signature_drk[64];
-extern byte sanctum_device_root_key_pub[64];
+
+
+//extern byte sanctum_sm_signature_drk[64];
+
 
 byte sm_hash[MDSIZE] = { 0, };
 byte sm_signature[SIGNATURE_SIZE] = { 0, };
 byte sm_public_key[PUBLIC_KEY_SIZE] = { 0, };
 byte sm_private_key[PRIVATE_KEY_SIZE] = { 0, };
 byte dev_public_key[PUBLIC_KEY_SIZE] = { 0, };
-byte cert_sm[256] = { 0, };
-byte CDI[64] = { 0, };
-byte ECA_pk[64] = { 0, };
-byte sm_hash_to_check[64] = { 0, };
-byte sm_key_pub[64] = { 0, };
-byte length_cert;
 
-byte sm_signature_drk[64] = {0,};
-byte device_root_key_pub[64] = {0,};
+//byte sm_hash_to_check[64] = { 0, };
+//byte sm_key_pub[64] = { 0, };
+//byte sm_signature_drk[64] = {0,};
+//
 
 mbedtls_x509_crt uff_cert;
 
@@ -71,8 +83,6 @@ unsigned int sanctum_sm_size = 0x1ff000;
 
 
 char* validation(mbedtls_x509_crt cert);
-
-
 
 int osm_pmp_set(uint8_t perm)
 {
@@ -133,12 +143,12 @@ void sm_copy_key()
   
   sbi_printf("Data obtained from the booting stage:\n");
 
-  sbi_memcpy(sm_key_pub, sanctum_sm_key_pub, 64);
+  sbi_memcpy(ECASM_pk, sanctum_ECASM_pk, 64);
   sbi_memcpy(CDI, sanctum_CDI, 64);
-  sbi_memcpy(sm_hash_to_check, sanctum_sm_hash_to_check, 64);
+  //sbi_memcpy(sm_hash_to_check, sanctum_sm_hash_to_check, 64);
   sbi_memcpy(cert_sm, sanctum_cert_sm, sanctum_length_cert);
-  sbi_memcpy(ECA_pk, sanctum_ECA_pk, 64);
-  sbi_memcpy(sm_signature_drk, sanctum_sm_signature_drk, 64);
+  sbi_memcpy(device_root_key_pub, sanctum_device_root_key_pub, 64);
+  //sbi_memcpy(sm_signature_drk, sanctum_sm_signature_drk, 64);
   sbi_memcpy(device_root_key_pub, sanctum_device_root_key_pub, 64);
   length_cert = sanctum_length_cert;
 
@@ -147,21 +157,23 @@ void sm_copy_key()
     sbi_printf("%02x", CDI[i]);
   }
   sbi_printf("\n-------------------------------------------------\n");
-  sbi_printf("ECA pk:\n");
+  sbi_printf("ECASM_pk:\n");
   for(int i = 0; i < 32; i ++){
-    sbi_printf("%02x", ECA_pk[i]);
+    sbi_printf("%02x", ECASM_pk[i]);
   }
   sbi_printf("\n-------------------------------------------------\n");
+  /*
   sbi_printf("sm_hash_to_check:\n");
   for(int i = 0; i < 64; i ++){
     sbi_printf("%02x", sm_hash_to_check[i]);
   }
-  sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("\n-------------------------------------------------\n");*/
+  /*
   sbi_printf("sm_signature_drk:\n");
   for(int i = 0; i < 64; i ++){
     sbi_printf("%02x", sm_signature_drk[i]);
   }
-  sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("\n-------------------------------------------------\n"); */
   sbi_printf("device_root_key_pub:\n");
   for(int i = 0; i < 32; i ++){
     sbi_printf("%02x", device_root_key_pub[i]);
@@ -236,7 +248,7 @@ void sm_copy_key()
    * Verifying the signature
    * 
   */
-  if(ed25519_verify(uff_cert.sig.p, hash_for_verification, 64, ECA_pk) == 0){
+  if(ed25519_verify(uff_cert.sig.p, hash_for_verification, 64, device_root_key_pub) == 0){
     sbi_printf("[SM] Error verifying the signature of the certificate\n");
     sbi_hart_hang();
   }
@@ -254,7 +266,7 @@ void sm_copy_key()
     sha3_final(hash_for_verification, &ctx_hash);
   */
 
-
+    /*
     if ((ed25519_verify(sm_signature_drk, sm_hash_to_check, 64, device_root_key_pub)) == 0)
     {
       sbi_printf("[SM] Error verifying the signature of the SM measure made during the boot\n");
@@ -264,7 +276,9 @@ void sm_copy_key()
     {
       sbi_printf("[SM] The signature of the SM measure made during the boot is correct\n\n");
     }
+    */
 
+  ed25519_create_keypair(ECASM_pk, ECASM_priv, CDI);
 
 
   /*
@@ -276,7 +290,7 @@ void sm_copy_key()
   sbi_printf("-----------------------------------------------------------------------------------------\n");
   sbi_printf("sanctum_sm_key_pub from the booting stage\n");
   for(int i = 0; i < 32; i ++){
-    sbi_printf("%02x", sm_key_pub[i]);
+    sbi_printf("%02x", ECASM_pk[i]);
   }
   sbi_printf("\n\n");
   sbi_printf("sanctum_sm_key_pub obtained parsing the der format cert\n");

@@ -48,15 +48,14 @@ extern byte sanctum_sm_signature[64];
  * Variables used to pass parameter to the SM
 */
 extern byte sanctum_CDI[64];
-extern byte sanctum_ECA_pk[64];
-extern byte sanctum_sm_hash_to_check[64];
-extern byte sanctum_sm_key_pub[64];
+extern byte sanctum_ECASM_pk[64];
+//extern byte sanctum_sm_hash_to_check[64];
+extern byte sanctum_device_root_key_pub[64];
 extern byte sanctum_cert_sm[256];
 extern int sanctum_length_cert;
 
-extern byte sanctum_sm_signature_drk[64];
-extern byte sanctum_device_root_key_pub[64];
-
+//extern byte sanctum_sm_key_pub[64];
+//extern byte sanctum_sm_signature_drk[64];
 
 // Variable used for testing porpouse to pass data from the boot stage to the sm
 extern byte test[64];
@@ -93,6 +92,7 @@ void bootloader()
 
   byte sanctum_sm_key_priv[64];
 
+  byte sanctum_ECASM_priv[64];
   
 
   // TODO: on real device, copy boot image from memory. In simulator, HTIF writes boot image
@@ -173,7 +173,7 @@ void bootloader()
     return 0;
   }
 
-  memcpy(sanctum_sm_hash_to_check, sanctum_sm_hash, 64);
+  //memcpy(sanctum_sm_hash_to_check, sanctum_sm_hash, 64);
 
   // All ok
   // Combine hash of the security monitor and the device root key to obtain the CDI
@@ -183,13 +183,13 @@ void bootloader()
   sha3_final(sanctum_CDI, &hash_ctx);
 
   // The CDI is used to generate the keypair associated to the security monitor
-  ed25519_create_keypair(sanctum_sm_key_pub, sanctum_sm_key_priv, sanctum_CDI);
+  ed25519_create_keypair(sanctum_ECASM_pk, sanctum_ECASM_priv, sanctum_CDI);
 
   // The measure of the sm is signed with the device root key
-  ed25519_sign(sanctum_sm_signature_drk, sanctum_sm_hash, 64, sanctum_device_root_key_pub, sanctum_device_root_key_priv);
+  //ed25519_sign(sanctum_sm_signature_drk, sanctum_sm_hash, 64, sanctum_device_root_key_pub, sanctum_device_root_key_priv);
 
   // Generating the key associated to the embedded CA
-  ed25519_create_keypair(sanctum_ECA_pk, sanctum_eca_key_priv, sanctum_device_root_key_priv);
+  //ed25519_create_keypair(sanctum_ECASM_pk, sanctum_ECASM_priv, sanctum_device_root_key_priv);
 
   // Create the certificate structure mbedtls_x509write_cert to release the cert of the security monitor
   mbedtls_x509write_cert cert;
@@ -197,7 +197,7 @@ void bootloader()
 
   // Setting the name of the issuer of the cert
   
-  ret = mbedtls_x509write_crt_set_issuer_name_mod(&cert, "O=Device Manufacturer");
+  ret = mbedtls_x509write_crt_set_issuer_name_mod(&cert, "O=Root of Trust");
   if (ret != 0)
   {
     return 0;
@@ -221,20 +221,20 @@ void bootloader()
 
   
   // Parsing the private key of the embedded CA that will be used to sign the certificate of the security monitor
-  ret = mbedtls_pk_parse_public_key(&issu_key, sanctum_eca_key_priv, 64, 1);
+  ret = mbedtls_pk_parse_public_key(&issu_key, sanctum_device_root_key_priv, 64, 1);
   if (ret != 0)
   {
     return 0;
   }
 
-  ret = mbedtls_pk_parse_public_key(&issu_key, sanctum_ECA_pk, 32, 0);
+  ret = mbedtls_pk_parse_public_key(&issu_key, sanctum_device_root_key_pub, 32, 0);
   if (ret != 0)
   {
     return 0;
   }
 
   // Parsing the public key of the security monitor that will be inserted in its certificate 
-  ret = mbedtls_pk_parse_public_key(&subj_key, sanctum_sm_key_pub, 32, 0);
+  ret = mbedtls_pk_parse_public_key(&subj_key, sanctum_ECASM_pk, 32, 0);
   if (ret != 0)
   {
     return 0;
