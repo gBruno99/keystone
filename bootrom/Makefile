@@ -51,7 +51,7 @@ bootrom_sources = \
 	./ed25519/*.c \
 	./sha3/*.c \
 	./x509custom/*.c\
-	./prova.c#\
+	./myString.c#\
 	./string.c#\
 	./prova.c#\
 	./mbed_tls_keystone/*.c#\
