@@ -44,6 +44,7 @@ byte cert_sm[256] = { 0, };
 byte length_cert;
 
 byte ECASM_priv[64];
+mbedtls_x509_crt uff_cert_sm;
 
 //extern byte sanctum_sm_hash_to_check[64];
 
@@ -71,7 +72,6 @@ byte dev_public_key[PUBLIC_KEY_SIZE] = { 0, };
 //byte sm_signature_drk[64] = {0,};
 //
 
-mbedtls_x509_crt uff_cert;
 
 byte hash_for_verification[64];
 sha3_ctx_t ctx_hash;
@@ -190,7 +190,7 @@ void sm_copy_key()
   }
   sbi_printf("\n-------------------------------------------------\n");
   
-  if ((mbedtls_x509_crt_parse_der(&uff_cert, cert_sm, length_cert)) != 0){
+  if ((mbedtls_x509_crt_parse_der(&uff_cert_sm, cert_sm, length_cert)) != 0){
       sbi_printf("\n\n\n[SM] Error parsing the certificate created during the booting process");
       sbi_hart_hang();
   }
@@ -201,11 +201,11 @@ void sm_copy_key()
 
   sbi_printf("Signature of the certificate: \n");
     for(int i =0; i <64; i ++){
-        sbi_printf("%02x",uff_cert.sig.p[i]);//   pk_ctx->pub_key[i]);
+        sbi_printf("%02x",uff_cert_sm.sig.p[i]);//   pk_ctx->pub_key[i]);
     }
   sbi_printf("\n\n\n\n");
 
-  char* str_ret = validation(uff_cert);
+  char* str_ret = validation(uff_cert_sm);
   if(my_strlen(str_ret) != 0){
     sbi_printf("[SM] Problem with the certificate: %s \n", str_ret);
     sbi_hart_hang();
@@ -222,7 +222,7 @@ void sm_copy_key()
   */
   
   sha3_init(&ctx_hash, 64);
-  sha3_update(&ctx_hash, uff_cert.tbs.p, uff_cert.tbs.len);
+  sha3_update(&ctx_hash, uff_cert_sm.tbs.p, uff_cert_sm.tbs.len);
   sha3_final(hash_for_verification, &ctx_hash);
   //hash_for_verification[0] = 0x23;
 
@@ -248,7 +248,7 @@ void sm_copy_key()
    * Verifying the signature
    * 
   */
-  if(ed25519_verify(uff_cert.sig.p, hash_for_verification, 64, device_root_key_pub) == 0){
+  if(ed25519_verify(uff_cert_sm.sig.p, hash_for_verification, 64, device_root_key_pub) == 0){
     sbi_printf("[SM] Error verifying the signature of the certificate\n");
     sbi_hart_hang();
   }
@@ -295,7 +295,7 @@ void sm_copy_key()
   sbi_printf("\n\n");
   sbi_printf("sanctum_sm_key_pub obtained parsing the der format cert\n");
     for(int i =0; i <32; i ++){
-        sbi_printf("%02x",uff_cert.pk.pk_ctx.pub_key[i]);//   pk_ctx->pub_key[i]);
+        sbi_printf("%02x",uff_cert_sm.pk.pk_ctx.pub_key[i]);//   pk_ctx->pub_key[i]);
     }
   sbi_printf("\n");
   sbi_printf("-----------------------------------------------------------------------------------------\n");
@@ -356,7 +356,7 @@ void sm_init(bool cold_boot)
 
     sm_region_id = smm_init();
     
-    mbedtls_x509_crt_init(&uff_cert);
+    mbedtls_x509_crt_init(&uff_cert_sm);
 
     if(sm_region_id < 0) {
       sbi_printf("[SM] intolerable error - failed to initialize SM memory");

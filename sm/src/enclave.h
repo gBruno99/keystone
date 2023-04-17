@@ -78,7 +78,10 @@ struct enclave
   byte local_att_pub[32];
   byte local_att_priv[64];
   mbedtls_x509write_cert crt_local_att;
-
+  /*
+  mbedtls_x509_crt SM_attes_key;
+  byte dev_root_key_pub[32];
+  */
   /* parameters */
   struct runtime_va_params_t params;
   struct runtime_pa_params pa_params;

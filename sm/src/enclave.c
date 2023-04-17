@@ -30,8 +30,10 @@ extern byte dev_public_key[PUBLIC_KEY_SIZE];
 extern byte CDI[64];
 extern byte ECASM_pk[64];
 extern byte ECASM_priv[64];
-
+extern mbedtls_x509_crt uff_cert_sm;
+extern byte device_root_key_pub[64];
 sha3_ctx_t hash_ctx_to_use;
+
 
 /****************************
  *
@@ -497,6 +499,11 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   {
     return 0;
   }
+  /*
+  enclaves[eid].SM_attes_key = uff_cert_sm;
+  for(int i = 0; i <32; i ++)
+    enclaves[eid].dev_root_key_pub[i] = dev_public_key[i];
+  */
 
   /* The enclave is fresh if it has been validated and hashed but not run yet. */
   if (ret)
