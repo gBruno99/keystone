@@ -34,14 +34,14 @@ extern byte sanctum_dev_public_key[PUBLIC_KEY_SIZE];
 extern byte sanctum_CDI[64];
 extern byte sanctum_ECASM_pk[64];
 extern byte sanctum_device_root_key_pub[64];
-extern byte sanctum_cert_sm[256];
+extern byte sanctum_cert_sm[512];
 extern int sanctum_length_cert;
 
 byte CDI[64] = { 0, };
 byte ECASM_pk[64] = { 0, };
 byte device_root_key_pub[64] = {0,};
-byte cert_sm[256] = { 0, };
-byte length_cert;
+byte cert_sm[512] = { 0, };
+int length_cert;
 
 byte ECASM_priv[64];
 mbedtls_x509_crt uff_cert_sm;
@@ -77,7 +77,8 @@ byte hash_for_verification[64];
 sha3_ctx_t ctx_hash;
 
 // Variable used for testing porpouse to pass data from the boot stage to the sm
-extern byte test[64];
+extern byte test[512];
+byte app_test[512] = {0,};
 
 unsigned int sanctum_sm_size = 0x1ff000;
 
@@ -149,7 +150,6 @@ void sm_copy_key()
   sbi_memcpy(cert_sm, sanctum_cert_sm, sanctum_length_cert);
   sbi_memcpy(device_root_key_pub, sanctum_device_root_key_pub, 64);
   //sbi_memcpy(sm_signature_drk, sanctum_sm_signature_drk, 64);
-  sbi_memcpy(device_root_key_pub, sanctum_device_root_key_pub, 64);
   length_cert = sanctum_length_cert;
 
   sbi_printf("CDI:\n");
@@ -199,12 +199,24 @@ void sm_copy_key()
 
   }
 
-  sbi_printf("Signature of the certificate: \n");
+  sbi_printf("Measure of the sm added in the x509 crt der (extension): \n");
+    for(int i =0; i <64; i ++){
+        sbi_printf("%02x",uff_cert_sm.hash.p[i]);
+    }
+  sbi_printf("\n\n");
+
+  sbi_printf("sm hash passed by default keystone implementation: \n");
+    for(int i =0; i <64; i ++){
+        sbi_printf("%02x",sm_hash[i]);
+    }
+  sbi_printf("\n\n");
+
+  sbi_printf("\nSignature of the certificate: \n");
     for(int i =0; i <64; i ++){
         sbi_printf("%02x",uff_cert_sm.sig.p[i]);//   pk_ctx->pub_key[i]);
     }
   sbi_printf("\n\n\n\n");
-
+  
   char* str_ret = validation(uff_cert_sm);
   if(my_strlen(str_ret) != 0){
     sbi_printf("[SM] Problem with the certificate: %s \n", str_ret);
@@ -215,7 +227,6 @@ void sm_copy_key()
     sbi_printf("[SM] The certificate is formally correct, now let's verify the signature\n");
 
 
- 
   /**
    * Computing the hash to verify the signature of the certificate
    * 
@@ -230,8 +241,8 @@ void sm_copy_key()
   *
   * Test used to check if the hash obtained from parsing the cert in the der format
   * is the same of the hash computed during the creation of the cert in der format to sign it
-  * 
-  sbi_printf("hash_for_verification: \n");
+  * */
+ /*  sbi_printf("hash_for_verification: \n");
     for(int i =0; i <64; i ++){
         sbi_printf("%02x",hash_for_verification[i]);//   pk_ctx->pub_key[i]);
     }
@@ -240,10 +251,14 @@ void sm_copy_key()
     for(int i =0; i <64; i ++){
         sbi_printf("%02x",test[i]);//   pk_ctx->pub_key[i]);
     }
+  sbi_printf("\n\n\n\n");*/
+  /*
+   sbi_printf("TBS: \n");
+    for(int i =0; i <uff_cert_sm.tbs.len; i ++){
+        sbi_printf("%02x",uff_cert_sm.tbs.p[i]);//   pk_ctx->pub_key[i]);
+    }
   sbi_printf("\n\n\n\n");
   */
-
-  
   /**
    * Verifying the signature
    * 

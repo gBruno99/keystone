@@ -76,6 +76,23 @@ typedef __uint8_t uint8_t;
 #define MBEDTLS_BYTE_6(x) ((uint8_t) (((x) >> 48) & 0xff))
 #define MBEDTLS_BYTE_7(x) ((uint8_t) (((x) >> 56) & 0xff))
 
+#define MBEDTLS_X509_EXT_AUTHORITY_KEY_IDENTIFIER MBEDTLS_OID_X509_EXT_AUTHORITY_KEY_IDENTIFIER
+#define MBEDTLS_X509_EXT_SUBJECT_KEY_IDENTIFIER   MBEDTLS_OID_X509_EXT_SUBJECT_KEY_IDENTIFIER
+#define MBEDTLS_X509_EXT_KEY_USAGE                MBEDTLS_OID_X509_EXT_KEY_USAGE
+#define MBEDTLS_X509_EXT_CERTIFICATE_POLICIES     MBEDTLS_OID_X509_EXT_CERTIFICATE_POLICIES
+#define MBEDTLS_X509_EXT_POLICY_MAPPINGS          MBEDTLS_OID_X509_EXT_POLICY_MAPPINGS
+#define MBEDTLS_X509_EXT_SUBJECT_ALT_NAME         MBEDTLS_OID_X509_EXT_SUBJECT_ALT_NAME         /* Supported (DNS) */
+#define MBEDTLS_X509_EXT_ISSUER_ALT_NAME          MBEDTLS_OID_X509_EXT_ISSUER_ALT_NAME
+#define MBEDTLS_X509_EXT_SUBJECT_DIRECTORY_ATTRS  MBEDTLS_OID_X509_EXT_SUBJECT_DIRECTORY_ATTRS
+#define MBEDTLS_X509_EXT_BASIC_CONSTRAINTS        MBEDTLS_OID_X509_EXT_BASIC_CONSTRAINTS        /* Supported */
+#define MBEDTLS_X509_EXT_NAME_CONSTRAINTS         MBEDTLS_OID_X509_EXT_NAME_CONSTRAINTS
+#define MBEDTLS_X509_EXT_POLICY_CONSTRAINTS       MBEDTLS_OID_X509_EXT_POLICY_CONSTRAINTS
+#define MBEDTLS_X509_EXT_EXTENDED_KEY_USAGE       MBEDTLS_OID_X509_EXT_EXTENDED_KEY_USAGE
+#define MBEDTLS_X509_EXT_CRL_DISTRIBUTION_POINTS  MBEDTLS_OID_X509_EXT_CRL_DISTRIBUTION_POINTS
+#define MBEDTLS_X509_EXT_INIHIBIT_ANYPOLICY       MBEDTLS_OID_X509_EXT_INIHIBIT_ANYPOLICY
+#define MBEDTLS_X509_EXT_FRESHEST_CRL             MBEDTLS_OID_X509_EXT_FRESHEST_CRL
+#define MBEDTLS_X509_EXT_NS_CERT_TYPE             MBEDTLS_OID_X509_EXT_NS_CERT_TYPE
+#define INT_MAX         2147483647  
 
 /**
  * \name X509 Error codes
@@ -683,8 +700,8 @@ int mbedtls_x509_write_extensions(unsigned char **p, unsigned char *start,  mbed
 int x509_write_extension(unsigned char **p, unsigned char *start, mbedtls_asn1_named_data *ext);
 int mbedtls_asn1_write_bool(unsigned char **p, const unsigned char *start, int boolean);
 int mbedtls_x509_set_extension(mbedtls_asn1_named_data *head, const char *oid, size_t oid_len,
-                               int critical, const unsigned char *val, size_t val_len, int *ne);
-int mbedtls_x509write_crt_set_extension(mbedtls_x509write_cert *ctx,  const char *oid, size_t oid_len, int critical, const unsigned char *val, size_t val_len);
+                               int critical, /*const*/ unsigned char *val, size_t val_len, int *ne);
+int mbedtls_x509write_crt_set_extension(mbedtls_x509write_cert *ctx,  const char *oid, size_t oid_len, int critical, /*const*/ unsigned char *val, size_t val_len);
 int x509_get_uid(unsigned char **p, const unsigned char *end,mbedtls_x509_buf *uid, int n);
 int pk_get_pk_alg(unsigned char **p,
                          const unsigned char *end,

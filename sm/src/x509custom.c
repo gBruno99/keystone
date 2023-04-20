@@ -619,10 +619,10 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
     /* Only for v3 */
     
     if (ctx->version == MBEDTLS_X509_CRT_VERSION_3) {
-        /*
-        MBEDTLS_ASN1_CHK_ADD(len,
-                             mbedtls_x509_write_extensions(&c,
-                                                           buf, ctx->extensions));*/
+        
+       // MBEDTLS_ASN1_CHK_ADD(len,
+         //                    mbedtls_x509_write_extensions(&c,
+           //                                                buf, ctx->extensions));
         MBEDTLS_ASN1_CHK_ADD(len,
                              mbedtls_x509_write_extensions_mod(&c,
                                                            buf, ctx->extens_arr, ctx->ne_ext_arr));
@@ -1553,7 +1553,7 @@ int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
             return ret;
         }
     }
-
+    
     if (crt->version == 3) {
         ret = x509_get_crt_ext(&p, end, crt, cb, p_ctx);
         if (ret != 0) {
@@ -2556,7 +2556,7 @@ int mbedtls_x509_write_extensions_mod(unsigned char **p, unsigned char *start,
     size_t len = 0;
     int i = 0;
     //mbedtls_asn1_named_data *cur_ext = first;
-
+    
     while (i != ne) {
         MBEDTLS_ASN1_CHK_ADD(len, x509_write_extension_mod(p, start, arr_exte[i]));
         i = i +1;
@@ -2640,14 +2640,14 @@ int mbedtls_asn1_write_bool(unsigned char **p, const unsigned char *start, int b
 int mbedtls_x509write_crt_set_extension(mbedtls_x509write_cert *ctx,
                                         const char *oid, size_t oid_len,
                                         int critical,
-                                        const unsigned char *val, size_t val_len)
+                                        /*const*/ unsigned char *val, size_t val_len)
 {
     return mbedtls_x509_set_extension(ctx->extens_arr, oid, oid_len,
                                       critical, val, val_len, &ctx->ne_ext_arr);
 }
 
 int mbedtls_x509_set_extension(mbedtls_asn1_named_data *head, const char *oid, size_t oid_len,
-                               int critical, const unsigned char *val, size_t val_len, int *ne)
+                               int critical, /*const*/ unsigned char *val, size_t val_len, int *ne)
 {
  //mbedtls_asn1_named_data *cur;
     //int pos;
@@ -3083,7 +3083,8 @@ int x509_get_crt_ext(unsigned char **p,
 
         crt ->hash.p = *p;
         crt ->hash.len = 64;
-        *p += 10;
+        *p = end_ext_octet;
+
         /*
          * Detect supported extensions
          */

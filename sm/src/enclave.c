@@ -499,6 +499,10 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   {
     return 0;
   }
+  const char oid_ext[] = {0xff, 0x20, 0xff};
+  unsigned char app[64];
+  my_memcpy(app, enclaves[eid].hash, 64);
+  mbedtls_x509write_crt_set_extension(&enclaves[eid].crt_local_att, oid_ext, 3, 0, app, 65);
   /*
   enclaves[eid].SM_attes_key = uff_cert_sm;
   for(int i = 0; i <32; i ++)

@@ -573,13 +573,13 @@ int mbedtls_ed25519_check_pub_priv(unsigned char* priv, unsigned char* pub, unsi
 }
 
 int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, size_t size,
-                                int (*f_rng)(void *, unsigned char *, size_t), void *p_rng){//, unsigned char* test){
+                                int (*f_rng)(void *, unsigned char *, size_t), void *p_rng){//, unsigned char* test, int *l_topass){
     
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const char *sig_oid = NULL;
     size_t sig_oid_len = 0;
     unsigned char *c, *c2;
-    unsigned char sig[100];
+    unsigned char sig[64];
     //size_t hash_length = 0;
     unsigned char hash[64];
 
@@ -603,12 +603,6 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
     //sig_oid = "{0x2B, 0x65, 0x70}";
     //sig_oid_len = 3;
 
-    /**
-     * 
-     * Extension to be done
-     * 
-     * 
-    */
     /*
      *  Extensions  ::=  SEQUENCE SIZE (1..MAX) OF Extension
      */
@@ -616,9 +610,9 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
     /* Only for v3 */
     
     if (ctx->version == MBEDTLS_X509_CRT_VERSION_3) {
-        /*MBEDTLS_ASN1_CHK_ADD(len,
-                             mbedtls_x509_write_extensions(&c,
-                                                           buf, ctx->extensions));*/
+        //MBEDTLS_ASN1_CHK_ADD(len,
+          //                   mbedtls_x509_write_extensions(&c,
+            //                                               buf, ctx->extensions));
         MBEDTLS_ASN1_CHK_ADD(len,
                              mbedtls_x509_write_extensions_mod(&c,
                                                            buf, ctx->extens_arr, ctx->ne_ext_arr));
@@ -634,8 +628,6 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
                                                     MBEDTLS_ASN1_CONSTRUCTED | 3));
     }
     
-
-
 
     /*
      *  SubjectPublicKeyInfo
@@ -756,13 +748,17 @@ int mbedtls_x509write_crt_der(mbedtls_x509write_cert *ctx, unsigned char *buf, s
         sha3_final(hash, &hash_ctx);
      * 
      * */ 
-
+    /*
+    for(int i = 0; i < len; i ++)
+      test[i] = c[i];
+    *l_topass = len;
+*/
     sha3_init(&hash_ctx, 64);
     sha3_update(&hash_ctx, c, len);
     sha3_final(hash, &hash_ctx);
 
-    //for(int i = 0; i < 64; i ++)
-      //  test[i] = hash[i];
+    //for(int i = 0; i < len; i ++)
+      // test[i] = c[i];
    // my_memcpy(test, hash, 64);
     /*
     if ((ret = mbedtls_pk_sign(ctx->issuer_key, ctx->md_alg,
@@ -1549,7 +1545,7 @@ int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
             return ret;
         }
     }
-
+    
     if (crt->version == 3) {
         ret = x509_get_crt_ext(&p, end, crt, cb, p_ctx);
         if (ret != 0) {
@@ -2551,7 +2547,7 @@ int mbedtls_x509_write_extensions_mod(unsigned char **p, unsigned char *start,
     size_t len = 0;
     int i = 0;
     //mbedtls_asn1_named_data *cur_ext = first;
-
+    
     while (i != ne) {
         MBEDTLS_ASN1_CHK_ADD(len, x509_write_extension_mod(p, start, arr_exte[i]));
         i = i +1;
@@ -2567,10 +2563,12 @@ int x509_write_extension_mod(unsigned char **p, unsigned char *start,
     size_t len = 0;
 
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_raw_buffer(p, start, &ext.val.p_arr[1],
-                                                            ext.val.len - 1));
+                                                            ext.val.len - 1)); 
+    
+    
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(p, start, ext.val.len - 1));
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(p, start, MBEDTLS_ASN1_OCTET_STRING));
-
+    
     if (ext.val.p_arr[0] != 0) {
         MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_bool(p, start, 1));
     }
@@ -2593,8 +2591,8 @@ int x509_write_extension(unsigned char **p, unsigned char *start,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
 
-    MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_raw_buffer(p, start, ext->val.p + 1,
-                                                            ext->val.len - 1));
+    MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_raw_buffer(p, start,  ext->val.p + 1,
+                                                           ext->val.len - 1));
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(p, start, ext->val.len - 1));
     MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(p, start, MBEDTLS_ASN1_OCTET_STRING));
 
@@ -2635,14 +2633,14 @@ int mbedtls_asn1_write_bool(unsigned char **p, const unsigned char *start, int b
 int mbedtls_x509write_crt_set_extension(mbedtls_x509write_cert *ctx,
                                         const char *oid, size_t oid_len,
                                         int critical,
-                                        const unsigned char *val, size_t val_len)
+                                        /*const*/ unsigned char *val, size_t val_len)
 {
     return mbedtls_x509_set_extension(ctx->extens_arr, oid, oid_len,
                                       critical, val, val_len, &ctx->ne_ext_arr);
 }
 
 int mbedtls_x509_set_extension(mbedtls_asn1_named_data *head, const char *oid, size_t oid_len,
-                               int critical, const unsigned char *val, size_t val_len, int *ne)
+                               int critical, /*const*/ unsigned char *val, size_t val_len, int *ne)
 {
  //mbedtls_asn1_named_data *cur;
     //int pos;
@@ -3075,10 +3073,13 @@ int x509_get_crt_ext(unsigned char **p,
             return MBEDTLS_ERROR_ADD(MBEDTLS_ERR_X509_INVALID_EXTENSIONS,
                                      MBEDTLS_ERR_ASN1_LENGTH_MISMATCH);
         }
+        
+        //my_memcpy(crt->hash.p_arr,*p, 64);
 
         crt ->hash.p = *p;
         crt ->hash.len = 64;
-        *p += 10;
+        *p += 64;
+
         /*
          * Detect supported extensions
          */
