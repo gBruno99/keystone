@@ -78,10 +78,15 @@ struct enclave
   byte local_att_pub[32];
   byte local_att_priv[64];
   mbedtls_x509write_cert crt_local_att;
+  unsigned char* crt_local_att_der[512];
+  int crt_local_att_der_length;
 
-  byte ldev_sk[10][64];
-  byte ldev_pk[10][32];
-  int n_ldev_key;
+  byte pk_ldev[32];
+  byte sk_ldev[64];
+
+  byte sk_array[10][64];
+  byte pk_array[10][32];
+  int n_keypair;
 
   /*
   mbedtls_x509_crt SM_attes_key;
@@ -147,5 +152,6 @@ int get_enclave_region_index(enclave_id eid, enum enclave_region_type type);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);
 uintptr_t get_enclave_region_size(enclave_id eid, int memid);
 unsigned long get_sealing_key(uintptr_t seal_key, uintptr_t key_ident, size_t key_ident_size, enclave_id eid);
-unsigned long create_keypair(enclave_id, unsigned char* pk);
+unsigned long create_keypair(enclave_id, unsigned char* pk ,int index);
+unsigned long get_cert_chain(enclave_id eid, unsigned char** certs, int* sizes);
 #endif

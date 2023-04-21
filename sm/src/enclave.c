@@ -32,6 +32,13 @@ extern byte ECASM_pk[64];
 extern byte ECASM_priv[64];
 extern mbedtls_x509_crt uff_cert_sm;
 extern byte device_root_key_pub[64];
+
+extern byte cert_sm[512];
+extern int length_cert;
+extern byte cert_root[512];
+extern int length_cert_root;
+extern byte cert_man[512];
+extern byte length_cert_man;
 sha3_ctx_t hash_ctx_to_use;
 
 
@@ -509,7 +516,23 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   my_memcpy(app, enclaves[eid].hash, 64);
   mbedtls_x509write_crt_set_extension(&enclaves[eid].crt_local_att, oid_ext, 3, 0, app, 65);
 
-  enclaves[eid].n_ldev_key = 0;
+  unsigned char cert_der[1024];
+  int effe_len_cert_der = 0;
+  size_t len_cert_der_tot = 1024;
+  ret = mbedtls_x509write_crt_der(&enclaves[eid].crt_local_att, cert_der, len_cert_der_tot, NULL, NULL);
+  if (ret != 0)
+  {
+    effe_len_cert_der = ret;
+  }
+  unsigned char *cert_real = cert_der;
+  int dif  = 0;
+  dif= 1024-effe_len_cert_der;
+  cert_real += dif;
+  enclaves[eid].crt_local_att_der_length = effe_len_cert_der;
+  my_memcpy(enclaves[eid].crt_local_att_der, cert_real, effe_len_cert_der);
+
+
+  enclaves[eid].n_keypair = 0;
 
   /*
   enclaves[eid].SM_attes_key = uff_cert_sm;
@@ -787,26 +810,50 @@ unsigned long get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }
 
-unsigned long create_keypair(enclave_id eid, unsigned char* pk){
+unsigned long create_keypair(enclave_id eid, unsigned char* pk, int index){
 
-  unsigned char seed[PUBLIC_KEY_SIZE];
+  unsigned char seed[PRIVATE_KEY_SIZE];
   unsigned char pk_app[PUBLIC_KEY_SIZE];
   unsigned char sk_app[PRIVATE_KEY_SIZE];
 
-  if(enclaves[eid].n_ldev_key == 0){
-    for(int i = 0; i <32 ; i++)
-      seed[i] = CDI[i +32];
-  }
-  else{
-    for(int i = 0; i <32; i ++)
-      seed[i] = enclaves[eid].ldev_sk[enclaves[eid].n_ldev_key-1][i];
-  }
+  unsigned char app[65];
+  my_memcpy(app, enclaves[eid].CDI, 64);
+  app[64] = index + '0';
+  
+
+  sha3_ctx_t ctx_hash;
+
+  sha3_init(&ctx_hash, 64);
+  sha3_update(&ctx_hash, app, 65);
+  sha3_final(seed, &ctx_hash);
 
   ed25519_create_keypair(pk_app, sk_app, seed);
-  my_memcpy(enclaves[eid].ldev_sk, sk_app, PRIVATE_KEY_SIZE );
-  my_memcpy(enclaves[eid].ldev_pk, pk_app, PUBLIC_KEY_SIZE);
-  enclaves[eid].n_ldev_key +=1;
+  
+  for(int i = 0; i < PUBLIC_KEY_SIZE; i ++)
+    enclaves[eid].pk_array[enclaves[eid].n_keypair][i] = pk_app[i];
+  for(int i = 0; i < PRIVATE_KEY_SIZE; i ++)
+    enclaves[eid].sk_array[enclaves[eid].n_keypair][i] = sk_app[i];
+  
+  if(enclaves[eid].n_keypair == 0){
+    my_memcpy(enclaves[eid].sk_ldev, sk_app, PRIVATE_KEY_SIZE );
+    my_memcpy(enclaves[eid].pk_ldev, pk_app, PUBLIC_KEY_SIZE);
+  }
+
+  enclaves[eid].n_keypair +=1;
 
   my_memcpy(pk, pk_app, PUBLIC_KEY_SIZE);
   return 0;
+}
+
+unsigned long get_cert_chain(enclave_id eid, unsigned char** certs, int* sizes){
+
+
+  my_memcpy(certs[0], enclaves[eid].crt_local_att_der, enclaves[eid].crt_local_att_der_length);
+  my_memcpy(certs[1], cert_sm, length_cert);
+  my_memcpy(certs[2], cert_root, length_cert_root);
+  my_memcpy(certs[3], cert_man, length_cert_man);
+
+  return 0;
+
+
 }

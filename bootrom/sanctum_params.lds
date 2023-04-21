@@ -52,9 +52,26 @@ PROVIDE( sanctum_device_root_key_pub = . );
 PROVIDE( sanctum_cert_sm = . );
 . += 0x200;
 
+/* 512 Bytes : security monitor's signature by device */
+PROVIDE( sanctum_cert_root = . );
+. += 0x200;
+
+/* 512 Bytes : security monitor's signature by device */
+PROVIDE( sanctum_cert_man = . );
+. += 0x200;
+
 /* 4 Byte : security monitor's signature by device */
 PROVIDE( sanctum_length_cert = . );
 . += 0x04;
+
+/* 4 Byte : security monitor's signature by device */
+PROVIDE( sanctum_length_cert_root = . );
+. += 0x04;
+
+/* 4 Byte : security monitor's signature by device */
+PROVIDE( sanctum_length_cert_man = . );
+. += 0x04;
+
 
 
 

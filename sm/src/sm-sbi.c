@@ -98,9 +98,16 @@ unsigned long sbi_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr
   return ret;
 }
 
-unsigned long sbi_sm_create_keypair(uintptr_t pk)
+unsigned long sbi_sm_create_keypair(uintptr_t pk, int index)
 {
   unsigned long ret;
-  ret = create_keypair(cpu_get_enclave_id(), (unsigned char *) pk);
+  ret = create_keypair(cpu_get_enclave_id(), (unsigned char *) pk, index);
+  return ret;
+}
+
+unsigned long
+getting_cert_chain(uintptr_t* certs, int* sizes){
+  unsigned long ret;
+  ret = get_cert_chain(cpu_get_enclave_id(), (unsigned char **) certs, sizes);
   return ret;
 }

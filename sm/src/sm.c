@@ -30,31 +30,42 @@ extern byte sanctum_sm_public_key[PUBLIC_KEY_SIZE];
 extern byte sanctum_dev_public_key[PUBLIC_KEY_SIZE];
 
 
-
 extern byte sanctum_CDI[64];
-extern byte sanctum_ECASM_pk[64];
-extern byte sanctum_device_root_key_pub[64];
 extern byte sanctum_cert_sm[512];
+extern byte sanctum_cert_root[512];
+extern byte sanctum_cert_man[512];
 extern int sanctum_length_cert;
+extern int sanctum_length_cert_root;
+extern int sanctum_length_cert_man;
+
 
 byte CDI[64] = { 0, };
-byte ECASM_pk[64] = { 0, };
-byte device_root_key_pub[64] = {0,};
 byte cert_sm[512] = { 0, };
 int length_cert;
+byte cert_root[512] = { 0, };
+int length_cert_root;
+byte cert_man[512] = { 0, };
+int length_cert_man;
 
 byte ECASM_priv[64];
+byte ECASM_pk[64] = { 0, };
+
 mbedtls_x509_crt uff_cert_sm;
+mbedtls_x509_crt uff_cert_root;
+mbedtls_x509_crt uff_cert_man;
 
 //extern byte sanctum_sm_hash_to_check[64];
+//byte device_root_key_pub[64] = {0,};
+//extern byte sanctum_device_root_key_pub[64];
+
+
 
 // the pk of the ECA is only 32bytes, but according to the alignment of the memory, it has to be of 64 bytes
 /*
 * Variable used to verify that the public key of the sm created during the boot is the same key obtained after the
 * parsing of the certificate in der format
 */
-//extern byte sanctum_sm_key_pub[64];
-//extern byte sanctum_ECA_pk[64];
+//extern byte sanctum_ECASM_pk[64];
 
 
 
@@ -144,42 +155,78 @@ void sm_copy_key()
   
   sbi_printf("Data obtained from the booting stage:\n");
 
-  sbi_memcpy(ECASM_pk, sanctum_ECASM_pk, 64);
-  sbi_memcpy(CDI, sanctum_CDI, 64);
+  //sbi_memcpy(ECASM_pk, sanctum_ECASM_pk, 64);
   //sbi_memcpy(sm_hash_to_check, sanctum_sm_hash_to_check, 64);
-  sbi_memcpy(cert_sm, sanctum_cert_sm, sanctum_length_cert);
-  sbi_memcpy(device_root_key_pub, sanctum_device_root_key_pub, 64);
+  //sbi_memcpy(device_root_key_pub, sanctum_device_root_key_pub, 64);
   //sbi_memcpy(sm_signature_drk, sanctum_sm_signature_drk, 64);
+
+  sbi_memcpy(CDI, sanctum_CDI, 64);
+  sbi_memcpy(cert_sm, sanctum_cert_sm, sanctum_length_cert);
+  sbi_memcpy(cert_root, sanctum_cert_root, sanctum_length_cert_root);
+  sbi_memcpy(cert_man, sanctum_cert_man, sanctum_length_cert_man);
+ 
   length_cert = sanctum_length_cert;
+  length_cert_root = sanctum_length_cert_root;
+  length_cert_man = sanctum_length_cert_man;
 
   sbi_printf("CDI:\n");
   for(int i = 0; i < 64; i ++){
     sbi_printf("%02x", CDI[i]);
   }
   sbi_printf("\n-------------------------------------------------\n");
+  /*
   sbi_printf("ECASM_pk:\n");
   for(int i = 0; i < 32; i ++){
     sbi_printf("%02x", ECASM_pk[i]);
   }
   sbi_printf("\n-------------------------------------------------\n");
-  /*
+  
   sbi_printf("sm_hash_to_check:\n");
   for(int i = 0; i < 64; i ++){
     sbi_printf("%02x", sm_hash_to_check[i]);
   }
-  sbi_printf("\n-------------------------------------------------\n");*/
-  /*
+  sbi_printf("\n-------------------------------------------------\n");
+  
   sbi_printf("sm_signature_drk:\n");
   for(int i = 0; i < 64; i ++){
     sbi_printf("%02x", sm_signature_drk[i]);
   }
   sbi_printf("\n-------------------------------------------------\n"); */
+  
+  if ((mbedtls_x509_crt_parse_der(&uff_cert_sm, cert_sm, length_cert)) != 0){
+      sbi_printf("\n\n\n[SM] Error parsing the certificate created during the booting process");
+      sbi_hart_hang();
+  }
+  else{
+    sbi_printf("\n[SM] The certificate of the security monitor is correctly parsed\n\n");
+
+  }
+
+  if ((mbedtls_x509_crt_parse_der(&uff_cert_root, cert_root, length_cert_root)) != 0){
+      sbi_printf("[SM] Error parsing the root of trust certificate\n\n");
+      sbi_hart_hang();
+  }
+  else{
+    sbi_printf("[SM] The root of trust certificate is correctly parsed\n\n");
+
+  }
+
+  if ((mbedtls_x509_crt_parse_der(&uff_cert_man, cert_man, length_cert_man)) != 0){
+      sbi_printf("[SM] Error parsing the manufacturer certificate\n\n");
+      sbi_hart_hang();
+  }
+  else{
+    sbi_printf("[SM] The manufacturer certificate is correctly parsed\n\n");
+
+  }
+  /*
   sbi_printf("device_root_key_pub:\n");
   for(int i = 0; i < 32; i ++){
-    sbi_printf("%02x", device_root_key_pub[i]);
+    sbi_printf("%02x", uff_cert_root.pk.pk_ctx.pub_key[i]);
   }
   sbi_printf("\n-------------------------------------------------\n");
-  
+  */
+ /*
   sbi_printf("length_cert:");
   sbi_printf("%d", length_cert);
   sbi_printf("\n-------------------------------------------------\n");
@@ -189,15 +236,25 @@ void sm_copy_key()
     sbi_printf("%02x", cert_sm[i]);
   }
   sbi_printf("\n-------------------------------------------------\n");
-  
-  if ((mbedtls_x509_crt_parse_der(&uff_cert_sm, cert_sm, length_cert)) != 0){
-      sbi_printf("\n\n\n[SM] Error parsing the certificate created during the booting process");
-      sbi_hart_hang();
-  }
-  else{
-    sbi_printf("\n\n\n[SM] The certificate of the security monitor is correctly parsed\n\n");
 
+  sbi_printf("length_cert_root:");
+  sbi_printf("%d", length_cert_root);
+  sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("cert root der format:\n");
+  for(int i = 0; i < length_cert_root; i ++){
+    sbi_printf("0x%02x,", cert_root[i]);
   }
+  sbi_printf("\n-------------------------------------------------\n");
+
+  sbi_printf("length_cert_man:");
+  sbi_printf("%d", length_cert_man);
+  sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("cert man der format:\n");
+  for(int i = 0; i < length_cert_man; i ++){
+    sbi_printf("0x%02x,", cert_man[i]);
+  }
+  sbi_printf("\n-------------------------------------------------\n");
+*/
 
   sbi_printf("Measure of the sm added in the x509 crt der (extension): \n");
     for(int i =0; i <64; i ++){
@@ -219,12 +276,30 @@ void sm_copy_key()
   
   char* str_ret = validation(uff_cert_sm);
   if(my_strlen(str_ret) != 0){
-    sbi_printf("[SM] Problem with the certificate: %s \n", str_ret);
+    sbi_printf("[SM] Problem with the sm certificate: %s \n\n", str_ret);
     sbi_hart_hang();
 
   }
   else 
-    sbi_printf("[SM] The certificate is formally correct, now let's verify the signature\n");
+  {
+    str_ret = validation(uff_cert_root);
+    if(my_strlen(str_ret) != 0){
+      sbi_printf("[SM] Problem with the root of trust certificate: %s \n\n", str_ret);
+      sbi_hart_hang();
+
+    }
+    else {
+      str_ret = validation(uff_cert_man);
+      if(my_strlen(str_ret) != 0){
+        sbi_printf("[SM] Problem with the manufacturer certificate: %s \n\n", str_ret);
+        sbi_hart_hang();
+
+      }
+      else {
+        sbi_printf("[SM] All the certificate chain is formally correct\n\n");
+      }
+    }
+  }
 
 
   /**
@@ -263,15 +338,30 @@ void sm_copy_key()
    * Verifying the signature
    * 
   */
-  if(ed25519_verify(uff_cert_sm.sig.p, hash_for_verification, 64, device_root_key_pub) == 0){
-    sbi_printf("[SM] Error verifying the signature of the certificate\n");
+ sbi_printf("[SM] Verifying the chain signature of the certificates until the man cert\n\n");
+
+  if(ed25519_verify(uff_cert_sm.sig.p, hash_for_verification, 64, uff_cert_root.pk.pk_ctx.pub_key) == 0){
+    sbi_printf("[SM] Error verifying the signature of the sm certificate\n\n");
     sbi_hart_hang();
   }
   else{
-    sbi_printf("[SM] The signature of the certificate is ok\n");
+    sbi_printf("[SM] The signature of the sm certificate is ok\n\n");
+    sha3_init(&ctx_hash, 64);
+    sha3_update(&ctx_hash, uff_cert_root.tbs.p, uff_cert_root.tbs.len);
+    sha3_final(hash_for_verification, &ctx_hash);
 
+    if(ed25519_verify(uff_cert_root.sig.p, hash_for_verification, 64, uff_cert_man.pk.pk_ctx.pub_key) == 0){
+      sbi_printf("[SM] Error verifying the signature of the root of trust certificate\n\n");
+      sbi_hart_hang();
+    }
+    else{
+      sbi_printf("[SM] The signature of the root of trust certificate is ok\n\n");
+
+      sbi_printf("[SM] All the chain is verified\n\n");
+    }
   }
 
+ 
   /**
    * Checking the measure made by the boot of the SM
    */
@@ -300,6 +390,7 @@ void sm_copy_key()
   * To check that the data read from the certificate is the correct one created in the booting stage
   */
   ///////////////////////////////////////////////////////////////////////////////
+  /*
   sbi_printf("-----------------------------------------------------------------------------------------\n");
   sbi_printf("Comparing what is parsed from the cert and what is directly passed from the booting stage\n");
   sbi_printf("-----------------------------------------------------------------------------------------\n");
@@ -314,7 +405,7 @@ void sm_copy_key()
     }
   sbi_printf("\n");
   sbi_printf("-----------------------------------------------------------------------------------------\n");
-
+  */
   ////////////////////////////////////////////////////////////////////////////////
   
 
@@ -372,6 +463,8 @@ void sm_init(bool cold_boot)
     sm_region_id = smm_init();
     
     mbedtls_x509_crt_init(&uff_cert_sm);
+    mbedtls_x509_crt_init(&uff_cert_root);
+
 
     if(sm_region_id < 0) {
       sbi_printf("[SM] intolerable error - failed to initialize SM memory");

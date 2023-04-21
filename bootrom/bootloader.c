@@ -35,6 +35,12 @@
 
 #include "x509custom/x509custom.h"
 
+static const unsigned char sanctum_uds[] = {
+  0x40, 0xa0, 0x99, 0x47, 0x8c, 0xce, 0xfa, 0x3a, 0x06, 0x63, 0xab, 0xc9,
+  0x5e, 0x7a, 0x1e, 0xc9, 0x54, 0xb4, 0xf5, 0xf6, 0x45, 0xba, 0xd8, 0x04,
+  0xdb, 0x13, 0xe7, 0xd7, 0x82, 0x6c, 0x70, 0x73}
+;
+
 typedef unsigned char byte;
 
 // Sanctum header fields in DRAM
@@ -52,7 +58,11 @@ extern byte sanctum_ECASM_pk[64];
 //extern byte sanctum_sm_hash_to_check[64];
 extern byte sanctum_device_root_key_pub[64];
 extern byte sanctum_cert_sm[512];
+extern byte sanctum_cert_root[512];
+extern byte sanctum_cert_man[512];
 extern int sanctum_length_cert;
+extern int sanctum_length_cert_root;
+extern int sanctum_length_cert_man;
 
 //extern byte sanctum_sm_key_pub[64];
 //extern byte sanctum_sm_signature_drk[64];
@@ -94,6 +104,7 @@ int bootloader()
 
   byte sanctum_ECASM_priv[64];
   
+  int ret;
 
   // TODO: on real device, copy boot image from memory. In simulator, HTIF writes boot image
   // ... SD card to beginning of memory.
@@ -122,7 +133,7 @@ int bootloader()
 #include "use_test_keys.h"
 
   // From the unique device identifier, a keypair is created, the device root key
-  ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv, sanctum_dev_secret_key);
+  ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv, sanctum_uds);
 
 // Loading of the manufacturer public key and of the digital signature of the security monitor
 
@@ -138,7 +149,7 @@ int bootloader()
   // For testing, create a keypair to simulate that we have already the public key of the manufacturer
   ed25519_create_keypair(public_key_test, private_key_test, seed_test);
 
-  int ret;
+
   char error_buf[100];
 
   // Measure for the first time the SM to simulate that the signature is provided by the manufacturer
@@ -219,8 +230,8 @@ int bootloader()
   mbedtls_pk_context issu_key;
   mbedtls_pk_init(&issu_key);
 
-  mbedtls_x509_crt uff_cert;
-  mbedtls_x509_crt_init(&uff_cert);
+  //mbedtls_x509_crt uff_cert;
+  //mbedtls_x509_crt_init(&uff_cert);
   
   // Parsing the private key of the embedded CA that will be used to sign the certificate of the security monitor
   ret = mbedtls_pk_parse_public_key(&issu_key, sanctum_device_root_key_priv, 64, 1);
@@ -266,8 +277,8 @@ int bootloader()
   }
   
   unsigned char cert_der[1024];
-  size_t len_cert_der_tot = 1024;
   int effe_len_cert_der;
+  size_t len_cert_der_tot = 1024;
 
   unsigned char oid_ext[] = {0xff, 0x20, 0xff};
   /*unsigned char ext_val[] ={ 0x20, 0xff,0xff, 0x20, 0xff,0xff, 0x20, 0xff, 0x20, 0xff,
@@ -281,13 +292,6 @@ int bootloader()
   mbedtls_x509write_crt_set_extension(&cert, oid_ext, 3, 0, sanctum_sm_hash, 65);
 
   // The structure mbedtls_x509write_cert is parsed to create a x509 cert in der format, signed and written in memory
-
-  /**
-   * 
-   * 
-   * VEDERE SE ERRORE E' IN INSERIMENTO DEL VALORE DELL'ESTENSIONE O QUANDO VIENE LETTA
-   * 
-  */
   ret = mbedtls_x509write_crt_der(&cert, cert_der, len_cert_der_tot, NULL, NULL);//, test, &len);
   if (ret != 0)
   {
@@ -300,7 +304,7 @@ int bootloader()
   
   unsigned char *cert_real = cert_der;
   // effe_len_cert_der stands for the length of the cert, placed starting from the end of the buffer cert_der
-  int dif = 1024-effe_len_cert_der;
+  int dif  = 1024-effe_len_cert_der;
   // cert_real points to the starts of the cert in der format
   cert_real += dif;
 
@@ -357,8 +361,7 @@ int bootloader()
   */
   ///////////////////////////////////////////////////////////////////////////////////////////
   //sanctum_length_cert = effe_len_cert_der;
-
-
+  
   memset((void *)sanctum_sm_key_priv, 0, sizeof(*sanctum_sm_key_priv));
 
   // Erase DRK_priv
@@ -397,3 +400,10 @@ int bootloader()
 
  
 }
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+  
+
+  
