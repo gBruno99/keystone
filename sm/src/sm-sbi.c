@@ -98,9 +98,9 @@ unsigned long sbi_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr
   return ret;
 }
 
-unsigned long sbi_sm_create_keypair(uintptr_t pk);
+unsigned long sbi_sm_create_keypair(uintptr_t pk)
 {
   unsigned long ret;
-  ret = create_keypair(cpu_get_enclave_id(), pk);
+  ret = create_keypair(cpu_get_enclave_id(), (unsigned char *) pk);
   return ret;
 }
