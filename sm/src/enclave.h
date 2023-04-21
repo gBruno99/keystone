@@ -78,6 +78,11 @@ struct enclave
   byte local_att_pub[32];
   byte local_att_priv[64];
   mbedtls_x509write_cert crt_local_att;
+
+  byte ldev_sk[10][64];
+  byte ldev_pk[10][32];
+  int n_ldev_key;
+
   /*
   mbedtls_x509_crt SM_attes_key;
   byte dev_root_key_pub[32];
@@ -132,6 +137,7 @@ unsigned long resume_enclave(struct sbi_trap_regs *regs, enclave_id eid);
 unsigned long exit_enclave(struct sbi_trap_regs *regs, enclave_id eid);
 unsigned long stop_enclave(struct sbi_trap_regs *regs, uint64_t request, enclave_id eid);
 unsigned long attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size, enclave_id eid);
+
 /* attestation and virtual mapping validation */
 unsigned long validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.
@@ -141,4 +147,5 @@ int get_enclave_region_index(enclave_id eid, enum enclave_region_type type);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);
 uintptr_t get_enclave_region_size(enclave_id eid, int memid);
 unsigned long get_sealing_key(uintptr_t seal_key, uintptr_t key_ident, size_t key_ident_size, enclave_id eid);
+unsigned long create_keypair(enclave_id, unsigned char* pk);
 #endif

@@ -38,4 +38,7 @@ sbi_sm_random();
 unsigned long
 sbi_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t arg0, uintptr_t arg1);
 
+unsigned long
+sbi_sm_create_keypair(uintptr_t pk);
+
 #endif
