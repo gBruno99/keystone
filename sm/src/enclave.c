@@ -854,6 +854,52 @@ unsigned long get_cert_chain(enclave_id eid, unsigned char** certs, int* sizes){
   my_memcpy(certs[3], cert_man, length_cert_man);
 
   return 0;
+}
 
+unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int data_len, unsigned char* out_data, int* len_out_data, unsigned char* pk){
+
+  sha3_ctx_t ctx_hash;
+  unsigned char fin_hash[64];
+  unsigned char sign[64];
+  int pos = -1;
+  
+  switch (flag){
+    //sign of TCI|pk_lDev with the private key of the attestation keypair of the enclave
+    //the sign is placed in out_data. The attestation pk can be obtained calling the get_chain_cert method
+    case 1:
+      sha3_init(&ctx_hash, 64);
+      sha3_update(&ctx_hash, enclaves[eid].hash, 64);
+      sha3_update(&ctx_hash, enclaves[eid].pk_ldev, 32);
+      sha3_final(fin_hash, &ctx_hash);
+
+      ed25519_sign(sign, fin_hash, 64, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
+      my_memcpy(out_data, sign, 64);
+      return 0;
+    break;
+    case 2:
+      //sign of generic data with a specific private key
+      //the pk associated with the private key that has to be used is passed by the enclave
+      for(int i = 0;  i < enclaves[eid].n_keypair; i ++)
+        if(my_memcmp(enclaves[eid].pk_array[i], pk, 64) == 0)
+          break;
+      if (pos == -1)
+        return -1;
+
+      sha3_init(&ctx_hash, 64);
+      sha3_update(&ctx_hash, data, data_len);
+      sha3_final(fin_hash, &ctx_hash);
+
+      ed25519_sign(sign, fin_hash, 64, enclaves[eid].pk_array[pos], enclaves[eid].sk_array[pos]);
+      my_memcpy(out_data, sign, 64);
+      return 0;
+    break;
+    case 3:
+      return 0;
+    break;
+    default:
+      return -1;
+    break;
+  }
+  return 0;
 
 }

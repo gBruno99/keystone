@@ -75,6 +75,9 @@ static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long
     case SBI_GET_CHAIN:
       retval = getting_cert_chain((long unsigned int*)regs->a0, (int*) regs->a1);
       break;
+    case SBI_CRYPTO_INTERFACE:
+      retval = sbi_do_crypto_op(regs->a0, (unsigned char*) regs->a1, regs->a2, (unsigned char*)regs->a3, (int*)regs->a4, regs->a5);
+      break;
     default:
       retval = SBI_ERR_SM_NOT_IMPLEMENTED;
       break;
