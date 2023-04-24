@@ -893,10 +893,12 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
       my_memcpy(out_data, sign, 64);
       return 0;
     break;
+    /*
     case 3:
       return 0;
     break;
-    default:
+    
+    */default:
       return -1;
     break;
   }
