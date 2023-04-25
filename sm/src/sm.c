@@ -30,6 +30,7 @@ extern byte sanctum_sm_public_key[PUBLIC_KEY_SIZE];
 extern byte sanctum_dev_public_key[PUBLIC_KEY_SIZE];
 
 
+// Variable used to pass the all that is needed to the SM to properly work
 extern byte sanctum_CDI[64];
 extern byte sanctum_cert_sm[512];
 extern byte sanctum_cert_root[512];
@@ -88,8 +89,8 @@ byte hash_for_verification[64];
 sha3_ctx_t ctx_hash;
 
 // Variable used for testing porpouse to pass data from the boot stage to the sm
-extern byte test[512];
-byte app_test[512] = {0,};
+extern byte test[64];
+byte app_test[64] = {0,};
 
 unsigned int sanctum_sm_size = 0x1ff000;
 
@@ -153,22 +154,17 @@ void sm_copy_key()
   sbi_memcpy(sm_private_key, sanctum_sm_secret_key, PRIVATE_KEY_SIZE);
   sbi_memcpy(dev_public_key, sanctum_dev_public_key, PUBLIC_KEY_SIZE);
   
+  // All the variables passed from the boot stage are copied in sm variables
   sbi_printf("Data obtained from the booting stage:\n");
-
-  //sbi_memcpy(ECASM_pk, sanctum_ECASM_pk, 64);
-  //sbi_memcpy(sm_hash_to_check, sanctum_sm_hash_to_check, 64);
-  //sbi_memcpy(device_root_key_pub, sanctum_device_root_key_pub, 64);
-  //sbi_memcpy(sm_signature_drk, sanctum_sm_signature_drk, 64);
-
   sbi_memcpy(CDI, sanctum_CDI, 64);
   sbi_memcpy(cert_sm, sanctum_cert_sm, sanctum_length_cert);
   sbi_memcpy(cert_root, sanctum_cert_root, sanctum_length_cert_root);
-  sbi_memcpy(cert_man, sanctum_cert_man, sanctum_length_cert_man);
- 
+  sbi_memcpy(cert_man, sanctum_cert_man, sanctum_length_cert_man); 
   length_cert = sanctum_length_cert;
   length_cert_root = sanctum_length_cert_root;
   length_cert_man = sanctum_length_cert_man;
-
+  
+  // Some informations about the variables obtained are printed to the screen
   sbi_printf("CDI:\n");
   for(int i = 0; i < 64; i ++){
     sbi_printf("%02x", CDI[i]);
@@ -193,7 +189,10 @@ void sm_copy_key()
   }
   sbi_printf("\n-------------------------------------------------\n"); */
   
+  // The different certs are parsed if there are no problems
   if ((mbedtls_x509_crt_parse_der(&uff_cert_sm, cert_sm, length_cert)) != 0){
+
+      // If there are some problems parsing a cert, all the start process is stopped
       sbi_printf("\n\n\n[SM] Error parsing the certificate created during the booting process");
       sbi_hart_hang();
   }
@@ -256,6 +255,7 @@ void sm_copy_key()
   sbi_printf("\n-------------------------------------------------\n");
 */
 
+  // Checking that the measure inserted in the cert, is itself correct and that the parsing process goes well
   sbi_printf("Measure of the sm added in the x509 crt der (extension): \n");
     for(int i =0; i <64; i ++){
         sbi_printf("%02x",uff_cert_sm.hash.p[i]);
@@ -268,12 +268,14 @@ void sm_copy_key()
     }
   sbi_printf("\n\n");
 
+  // Printing the signature of the sm cert
   sbi_printf("\nSignature of the certificate: \n");
     for(int i =0; i <64; i ++){
         sbi_printf("%02x",uff_cert_sm.sig.p[i]);//   pk_ctx->pub_key[i]);
     }
   sbi_printf("\n\n\n\n");
   
+  // Check that all the certs in the chain are formally correct
   char* str_ret = validation(uff_cert_sm);
   if(my_strlen(str_ret) != 0){
     sbi_printf("[SM] Problem with the sm certificate: %s \n\n", str_ret);
@@ -302,14 +304,16 @@ void sm_copy_key()
   }
 
 
-  /**
-   * Computing the hash to verify the signature of the certificate
-   * 
-  */
   
+  // Once the cert in der format is parsed, there is a field inserted in the structure that represents the raw data of the cert that is used to compute the hash
+  // that later has been signed with the public key of the issuer
+  // Using the same field, the sm cane verify the signature inserted in his cert, using the public key of the issuer (in this case the issuer is the root of trust)
+
   sha3_init(&ctx_hash, 64);
   sha3_update(&ctx_hash, uff_cert_sm.tbs.p, uff_cert_sm.tbs.len);
   sha3_final(hash_for_verification, &ctx_hash);
+
+  // If the hash of the field is not the same that is computed in the boot process, the verification of the signature goes wrong
   //hash_for_verification[0] = 0x23;
 
   /*
@@ -345,6 +349,7 @@ void sm_copy_key()
     sbi_hart_hang();
   }
   else{
+    // The verification process is also repeated to verify the cert associated to the root of trust, certified with the private key of the manufacturer
     sbi_printf("[SM] The signature of the sm certificate is ok\n\n");
     sha3_init(&ctx_hash, 64);
     sha3_update(&ctx_hash, uff_cert_root.tbs.p, uff_cert_root.tbs.len);
@@ -383,6 +388,8 @@ void sm_copy_key()
     }
     */
 
+  // From the CDI, the sm can be directly obtained the keys associated to the emebedded CA of his layer
+  // that are used to signed the cert associated to the attestation key of the different enclaves 
   ed25519_create_keypair(ECASM_pk, ECASM_priv, CDI);
 
 
@@ -512,7 +519,7 @@ void sm_init(bool cold_boot)
     sbi_hart_hang();
   }
 
-  sbi_printf("[SM] Keystone security monitor has been initialized!\n");
+  sbi_printf("[SM] Keystone security monitor has been initialized!\n\n");
 
   sm_print_hash();
 

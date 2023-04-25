@@ -430,6 +430,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   spin_lock(&encl_lock); // FIXME This should error for second enter.
   ret = validate_and_hash_enclave(&enclaves[eid]);
 
+  // The CDI of the sm is combined with the measure of the enclaves to obtain the CDI of the enclave
   sha3_init(&hash_ctx_to_use, 64);
   sha3_update(&hash_ctx_to_use, CDI, 64);
   sha3_update(&hash_ctx_to_use, enclaves[eid].hash, 64);
@@ -440,12 +441,13 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   for(int i = 0; i < 32; i ++)
     seed_for_local_att_key[i] = enclaves[eid].CDI[i];
 
+  // The CDI of the enclave is used to create the local attestation keys of the enclave
   ed25519_create_keypair(enclaves[eid].local_att_pub, enclaves[eid].local_att_priv, seed_for_local_att_key);
 
+  // Associated to the local attestation keys of the enclaves, a new 509 cert is created 
   mbedtls_x509write_crt_init(&enclaves[eid].crt_local_att);
 
   // Setting the name of the issuer of the cert
-  
   ret = mbedtls_x509write_crt_set_issuer_name_mod(&enclaves[eid].crt_local_att, "O=Security Monitor");
   if (ret != 0)
   {
@@ -453,7 +455,6 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   }
   
   // Setting the name of the subject of the cert
-  
   ret = mbedtls_x509write_crt_set_subject_name_mod(&enclaves[eid].crt_local_att, "O=Enclave" );
   if (ret != 0)
   {
@@ -469,20 +470,19 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   mbedtls_pk_init(&issu_key);
 
   
-  // Parsing the private key of the embedded CA that will be used to sign the certificate of the security monitor
+  // The keys of the embedded CA are used to sign the different certs associated to the local attestation keys of the different enclaves  
   ret = mbedtls_pk_parse_public_key(&issu_key, ECASM_priv, 64, 1);
   if (ret != 0)
   {
     return 0;
   }
-
   ret = mbedtls_pk_parse_public_key(&issu_key, ECASM_pk, 32, 0);
   if (ret != 0)
   {
     return 0;
   }
 
-  // Parsing the public key of the security monitor that will be inserted in its certificate 
+  // Parsing the public key of the enclave that will be inserted in its certificate 
   ret = mbedtls_pk_parse_public_key(&subj_key, enclaves[eid].local_att_pub, 32, 0);
   if (ret != 0)
   {
@@ -493,7 +493,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   unsigned char serial[] = {"0x0, 0x0, 0x0"};
   serial[2] = eid + '0';
   
-  // The public key of the security monitor is inserted in the structure
+  // The public key of the enclave is inserted in the structure
   mbedtls_x509write_crt_set_subject_key(&enclaves[eid].crt_local_att, &subj_key);
 
   // The private key of the embedded CA is used later to sign the cert
@@ -514,6 +514,8 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   const char oid_ext[] = {0xff, 0x20, 0xff};
   unsigned char app[64];
   my_memcpy(app, enclaves[eid].hash, 64);
+
+  // The measure of the enclave is inserted as extension in the cert created for his local attestation keys
   mbedtls_x509write_crt_set_extension(&enclaves[eid].crt_local_att, oid_ext, 3, 0, app, 65);
 
   unsigned char cert_der[1024];
@@ -528,10 +530,12 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   int dif  = 0;
   dif= 1024-effe_len_cert_der;
   cert_real += dif;
+
+  // The der format of the cert and its length are stored in the specific variables of the enclave structure
   enclaves[eid].crt_local_att_der_length = effe_len_cert_der;
   my_memcpy(enclaves[eid].crt_local_att_der, cert_real, effe_len_cert_der);
 
-
+  // The number of the keypair associated to the created enclave that are not the local attestation keys is set to 0
   enclaves[eid].n_keypair = 0;
 
   /*
