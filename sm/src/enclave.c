@@ -490,8 +490,8 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   }
 
   // Variable  used to specify the serial of the cert
-  unsigned char serial[] = {"0x0, 0x0, 0x0"};
-  serial[2] = eid + '0';
+  unsigned char serial[] = {0x0, 0x0, 0x0};
+  serial[2] = eid;
   
   // The public key of the enclave is inserted in the structure
   mbedtls_x509write_crt_set_subject_key(&enclaves[eid].crt_local_att, &subj_key);

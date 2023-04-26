@@ -134,7 +134,7 @@ int bootloader()
 
   // The device root keys are created from the uds
   // This keys are certified by the manufacuter and the cert is stored in memory, like the cert of the manufacturer
-  ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv, sanctum_uds);
+ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv, sanctum_uds);
 
 // Loading of the manufacturer public key and of the digital signature of the security monitor
 

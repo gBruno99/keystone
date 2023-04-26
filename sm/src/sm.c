@@ -155,7 +155,6 @@ void sm_copy_key()
   sbi_memcpy(dev_public_key, sanctum_dev_public_key, PUBLIC_KEY_SIZE);
   
   // All the variables passed from the boot stage are copied in sm variables
-  sbi_printf("Data obtained from the booting stage:\n");
   sbi_memcpy(CDI, sanctum_CDI, 64);
   sbi_memcpy(cert_sm, sanctum_cert_sm, sanctum_length_cert);
   sbi_memcpy(cert_root, sanctum_cert_root, sanctum_length_cert_root);
@@ -164,12 +163,6 @@ void sm_copy_key()
   length_cert_root = sanctum_length_cert_root;
   length_cert_man = sanctum_length_cert_man;
   
-  // Some informations about the variables obtained are printed to the screen
-  sbi_printf("CDI:\n");
-  for(int i = 0; i < 64; i ++){
-    sbi_printf("%02x", CDI[i]);
-  }
-  sbi_printf("\n-------------------------------------------------\n");
   /*
   sbi_printf("ECASM_pk:\n");
   for(int i = 0; i < 32; i ++){
@@ -255,26 +248,6 @@ void sm_copy_key()
   sbi_printf("\n-------------------------------------------------\n");
 */
 
-  // Checking that the measure inserted in the cert, is itself correct and that the parsing process goes well
-  sbi_printf("Measure of the sm added in the x509 crt der (extension): \n");
-    for(int i =0; i <64; i ++){
-        sbi_printf("%02x",uff_cert_sm.hash.p[i]);
-    }
-  sbi_printf("\n\n");
-
-  sbi_printf("sm hash passed by default keystone implementation: \n");
-    for(int i =0; i <64; i ++){
-        sbi_printf("%02x",sm_hash[i]);
-    }
-  sbi_printf("\n\n");
-
-  // Printing the signature of the sm cert
-  sbi_printf("\nSignature of the certificate: \n");
-    for(int i =0; i <64; i ++){
-        sbi_printf("%02x",uff_cert_sm.sig.p[i]);//   pk_ctx->pub_key[i]);
-    }
-  sbi_printf("\n\n\n\n");
-  
   // Check that all the certs in the chain are formally correct
   char* str_ret = validation(uff_cert_sm);
   if(my_strlen(str_ret) != 0){
@@ -302,16 +275,6 @@ void sm_copy_key()
       }
     }
   }
-
-
-  
-  // Once the cert in der format is parsed, there is a field inserted in the structure that represents the raw data of the cert that is used to compute the hash
-  // that later has been signed with the public key of the issuer
-  // Using the same field, the sm cane verify the signature inserted in his cert, using the public key of the issuer (in this case the issuer is the root of trust)
-
-  sha3_init(&ctx_hash, 64);
-  sha3_update(&ctx_hash, uff_cert_sm.tbs.p, uff_cert_sm.tbs.len);
-  sha3_final(hash_for_verification, &ctx_hash);
 
   // If the hash of the field is not the same that is computed in the boot process, the verification of the signature goes wrong
   //hash_for_verification[0] = 0x23;
@@ -342,7 +305,15 @@ void sm_copy_key()
    * Verifying the signature
    * 
   */
- sbi_printf("[SM] Verifying the chain signature of the certificates until the man cert...\n\n");
+
+ // Once the cert in der format is parsed, there is a field inserted in the structure that represents the raw data of the cert that is used to compute the hash
+  // that later has been signed with the public key of the issuer
+  // Using the same field, the sm cane verify the signature inserted in his cert, using the public key of the issuer (in this case the issuer is the root of trust)
+
+  sha3_init(&ctx_hash, 64);
+  sha3_update(&ctx_hash, uff_cert_sm.tbs.p, uff_cert_sm.tbs.len);
+  sha3_final(hash_for_verification, &ctx_hash);
+  sbi_printf("[SM] Verifying the chain signature of the certificates until the man cert...\n\n");
 
   if(ed25519_verify(uff_cert_sm.sig.p, hash_for_verification, 64, uff_cert_root.pk.pk_ctx.pub_key) == 0){
     sbi_printf("[SM] Error verifying the signature of the sm certificate\n\n");
@@ -366,6 +337,33 @@ void sm_copy_key()
       sbi_printf("[SM] All the chain is verified\n\n");
     }
   }
+
+    // Some informations about the variables obtained are printed to the screen
+  sbi_printf("CDI:\n");
+  for(int i = 0; i < 64; i ++){
+    sbi_printf("%02x", CDI[i]);
+  }
+  sbi_printf("\n\n");
+
+  // Checking that the measure inserted in the cert, is itself correct and that the parsing process goes well
+  sbi_printf("Measure of the sm added in the x509 crt der (extension): \n");
+    for(int i =0; i <64; i ++){
+        sbi_printf("%02x",uff_cert_sm.hash.p[i]);
+    }
+  sbi_printf("\n\n");
+
+  sbi_printf("sm hash passed by default keystone implementation: \n");
+    for(int i =0; i <64; i ++){
+        sbi_printf("%02x",sm_hash[i]);
+    }
+  sbi_printf("\n\n");
+
+  // Printing the signature of the sm cert
+  sbi_printf("Signature of the certificate: \n");
+    for(int i =0; i <64; i ++){
+        sbi_printf("%02x",uff_cert_sm.sig.p[i]);//   pk_ctx->pub_key[i]);
+    }
+  sbi_printf("\n\n\n\n");
 
  
   /**
