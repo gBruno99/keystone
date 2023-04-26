@@ -880,7 +880,8 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
       sha3_update(&ctx_hash, enclaves[eid].pk_ldev, 32);
       sha3_final(fin_hash, &ctx_hash);
 
-      ed25519_sign(sign, fin_hash, 64, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
+      //ed25519_sign(sign, fin_hash, 64, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
+      ed25519_sign(sign, fin_hash, 64, ECASM_pk, ECASM_priv);
       my_memcpy(out_data, sign, 64);
       return 0;
     break;

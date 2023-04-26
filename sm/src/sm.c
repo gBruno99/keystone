@@ -354,6 +354,7 @@ void sm_copy_key()
     sha3_init(&ctx_hash, 64);
     sha3_update(&ctx_hash, uff_cert_root.tbs.p, uff_cert_root.tbs.len);
     sha3_final(hash_for_verification, &ctx_hash);
+    //hash_for_verification[0] = 0x0;
 
     if(ed25519_verify(uff_cert_root.sig.p, hash_for_verification, 64, uff_cert_man.pk.pk_ctx.pub_key) == 0){
       sbi_printf("[SM] Error verifying the signature of the root of trust certificate\n\n");
