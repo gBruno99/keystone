@@ -342,7 +342,7 @@ void sm_copy_key()
    * Verifying the signature
    * 
   */
- sbi_printf("[SM] Verifying the chain signature of the certificates until the man cert\n\n");
+ sbi_printf("[SM] Verifying the chain signature of the certificates until the man cert...\n\n");
 
   if(ed25519_verify(uff_cert_sm.sig.p, hash_for_verification, 64, uff_cert_root.pk.pk_ctx.pub_key) == 0){
     sbi_printf("[SM] Error verifying the signature of the sm certificate\n\n");

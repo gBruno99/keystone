@@ -853,9 +853,13 @@ unsigned long get_cert_chain(enclave_id eid, unsigned char** certs, int* sizes){
 
 
   my_memcpy(certs[0], enclaves[eid].crt_local_att_der, enclaves[eid].crt_local_att_der_length);
+  sizes[0] = enclaves[eid].crt_local_att_der_length;
   my_memcpy(certs[1], cert_sm, length_cert);
+  sizes[1] = length_cert;
   my_memcpy(certs[2], cert_root, length_cert_root);
+  sizes[2] = length_cert_root;
   my_memcpy(certs[3], cert_man, length_cert_man);
+  sizes[3] = length_cert_man;
 
   return 0;
 }
