@@ -132,10 +132,6 @@ int bootloader()
 
 #include "use_test_keys.h"
 
-  // The device root keys are created from the uds
-  // This keys are certified by the manufacuter and the cert is stored in memory, like the cert of the manufacturer
-ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv, sanctum_uds);
-
 // Loading of the manufacturer public key and of the digital signature of the security monitor
 
 // #include #"use_sm_sign_and_pk_man.h"
@@ -177,9 +173,13 @@ ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv
   // All ok
   // Combine hash of the security monitor and the device root key to obtain the CDI
   sha3_init(&hash_ctx, 64);
-  sha3_update(&hash_ctx, sanctum_device_root_key_priv, sizeof(*sanctum_device_root_key_priv));
+  sha3_update(&hash_ctx, sanctum_uds, sizeof(*sanctum_uds));
   sha3_update(&hash_ctx, sanctum_sm_hash, sizeof(*sanctum_sm_hash));
   sha3_final(sanctum_CDI, &hash_ctx);
+
+  // The device root keys are created from the CDI
+  // This keys are certified by the manufacuter and the cert is stored in memory, like the cert of the manufacturer
+  ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv, sanctum_CDI);
 
   // The CDI is used to generate the keypair associated to the security monitor
   ed25519_create_keypair(sanctum_ECASM_pk, sanctum_ECASM_priv, sanctum_CDI);
@@ -293,6 +293,116 @@ ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv
   sanctum_length_cert = effe_len_cert_der;
   memcpy(sanctum_cert_sm, cert_real, effe_len_cert_der);
 
+  //In the real case the cert associated to the device root key is provided by the manufacturer
+  //in this scenario it is not possible due to the fact the SM can change, so also its measure can change
+  //and if the sm measure change also the CDI and consequently the device root keys will change.
+  //So until the sm can change, the cert associated to the device root keys are generated here
+  //In this way there will be no problem to check the cert, that otherwise will be associated to a device root key pub wrong
+  /***********************************************************************************************************/
+  /***********************************************************************************************************/
+
+  
+  mbedtls_x509write_cert cert_root;
+  mbedtls_x509write_crt_init(&cert_root);
+
+  // Setting the name of the issuer of the cert
+  
+  ret = mbedtls_x509write_crt_set_issuer_name_mod(&cert_root, "O=Manufacturer");
+  if (ret != 0)
+  {
+    return 0;
+  }
+  
+  // Setting the name of the subject of the cert
+  
+  ret = mbedtls_x509write_crt_set_subject_name_mod(&cert_root, "O=Root of Trust");
+  if (ret != 0)
+  {
+    return 0;
+  }
+
+  // pk context used to embed the keys of the subject of the cert
+  mbedtls_pk_context subj_key_test;
+  mbedtls_pk_init(&subj_key_test);
+
+  // pk context used to embed the keys of the issuer of the cert
+  mbedtls_pk_context issu_key_test;
+  mbedtls_pk_init(&issu_key_test);
+  
+  // Parsing the private key of the embedded CA that will be used to sign the certificate of the security monitor
+  ret = mbedtls_pk_parse_public_key(&issu_key_test, sanctum_dev_secret_key, 64, 1);
+  if (ret != 0)
+  {
+    return 0;
+  }
+
+  ret = mbedtls_pk_parse_public_key(&issu_key_test, sanctum_dev_public_key, 32, 0);
+  if (ret != 0)
+  {
+    return 0;
+  }
+
+  // Parsing the public key of the security monitor that will be inserted in its certificate 
+  ret = mbedtls_pk_parse_public_key(&subj_key_test, sanctum_device_root_key_pub, 32, 0);
+  if (ret != 0)
+  {
+    return 0;
+  }
+
+  
+  // Variable  used to specify the serial of the cert
+  unsigned char serial_root[] = {0x00, 0x00, 0x00};
+  
+  // The public key of the security monitor is inserted in the structure
+  mbedtls_x509write_crt_set_subject_key(&cert_root, &subj_key_test);
+
+  // The private key of the embedded CA is used later to sign the cert
+  mbedtls_x509write_crt_set_issuer_key(&cert_root, &issu_key_test);
+  
+  // The serial of the cert is setted
+  mbedtls_x509write_crt_set_serial_raw(&cert_root, serial_root, 3);
+  
+  // The algoithm used to do the hash for the signature is specified
+  mbedtls_x509write_crt_set_md_alg(&cert_root, MBEDTLS_MD_SHA512);
+  
+  // The validity of the crt is specified
+  ret = mbedtls_x509write_crt_set_validity(&cert_root, "20220101000000", "20230101000000");
+  if (ret != 0)
+  {
+    return 0;
+  }
+  
+  unsigned char cert_der_root[1024];
+  int effe_len_cert_der_root;
+
+  // The structure mbedtls_x509write_cert is parsed to create a x509 cert in der format, signed and written in memory
+  ret = mbedtls_x509write_crt_der(&cert_root, cert_der_root, 1024, NULL, NULL);//, test, &len);
+  if (ret != 0)
+  {
+    effe_len_cert_der_root = ret;
+  }
+  else
+  {
+    return 0;
+  }
+
+  unsigned char *cert_real_root = cert_der_root;
+  // effe_len_cert_der stands for the length of the cert, placed starting from the end of the buffer cert_der
+  int dif_root = 1024-effe_len_cert_der_root;
+  // cert_real points to the starts of the cert in der format
+  cert_real_root += dif_root;
+
+  sanctum_length_cert_root = effe_len_cert_der_root;
+  memcpy(sanctum_cert_root, cert_real_root, effe_len_cert_der_root);
+  /*****************************************************************************************************************/
+  /*****************************************************************************************************************/
+
+  
+
+
+
+
+  //memcpy(test, sanctum_device_root_key_pub, 64);
 
   //Test to check the signature
   //////////////////////////////////////////////////////////////////////////////

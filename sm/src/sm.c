@@ -390,7 +390,16 @@ void sm_copy_key()
   // From the CDI, the sm can be directly obtained the keys associated to the emebedded CA of his layer
   // that are used to signed the cert associated to the attestation key of the different enclaves 
   ed25519_create_keypair(ECASM_pk, ECASM_priv, CDI);
-
+  /*
+  sbi_printf("length_cert_root:");
+  sbi_printf("%d", length_cert_root);
+  sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("cert root der format:\n");
+  for(int i = 0; i < length_cert_root; i ++){
+    sbi_printf("0x%02x,", cert_root[i]);
+  }
+  sbi_printf("\n-------------------------------------------------\n");
+*/
 
   /*
   * To check that the data read from the certificate is the correct one created in the booting stage
