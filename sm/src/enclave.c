@@ -525,6 +525,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   if (ret != 0)
   {
     effe_len_cert_der = ret;
+    ret = 0;
   }
   unsigned char *cert_real = cert_der;
   int dif  = 0;
@@ -883,6 +884,7 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
       //ed25519_sign(sign, fin_hash, 64, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
       ed25519_sign(sign, fin_hash, 64, ECASM_pk, ECASM_priv);
       my_memcpy(out_data, sign, 64);
+      *len_out_data = 64;
       return 0;
     break;
     case 2:
@@ -900,6 +902,7 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
 
       ed25519_sign(sign, fin_hash, 64, enclaves[eid].pk_array[pos], enclaves[eid].sk_array[pos]);
       my_memcpy(out_data, sign, 64);
+      *len_out_data = 64;
       return 0;
     break;
     /*
