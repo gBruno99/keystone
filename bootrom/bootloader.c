@@ -181,15 +181,15 @@ int bootloader()
   // This keys are certified by the manufacuter and the cert is stored in memory, like the cert of the manufacturer
   ed25519_create_keypair(sanctum_device_root_key_pub, sanctum_device_root_key_priv, sanctum_CDI);
 
+  // The ECA keys are obtained starting from a seed generated hashing the CDI and the measure of the SM
   unsigned char seed_for_ECA_keys[64];
 
   sha3_init(&hash_ctx, 64);
   sha3_update(&hash_ctx, sanctum_CDI, 64);
   sha3_update(&hash_ctx, sanctum_sm_hash, 64);
   sha3_final(seed_for_ECA_keys, &hash_ctx);
-
-  // The CDI is used to generate the keypair associated to the security monitor
   ed25519_create_keypair(sanctum_ECASM_pk, sanctum_ECASM_priv, seed_for_ECA_keys);
+  
   //my_memcpy(test, sanctum_ECASM_priv, 64);
 
   // Create the certificate structure mbedtls_x509write_cert to release the cert of the security monitor
