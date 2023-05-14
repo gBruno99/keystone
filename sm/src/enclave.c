@@ -822,31 +822,39 @@ unsigned long create_keypair(enclave_id eid, unsigned char* pk, int index){
   unsigned char sk_app[PRIVATE_KEY_SIZE];
 
   unsigned char app[65];
+
+  // The new keypair is obtained adding at the end of the CDI of the enclave an index, provided by the enclave itself
   my_memcpy(app, enclaves[eid].CDI, 64);
   app[64] = index + '0';
   
 
   sha3_ctx_t ctx_hash;
 
+  // The hash function is used to provide the seed for the keys generation
   sha3_init(&ctx_hash, 64);
   sha3_update(&ctx_hash, app, 65);
   sha3_final(seed, &ctx_hash);
-
   ed25519_create_keypair(pk_app, sk_app, seed);
   
+  // The new keypair is stored in the relatives arrays
   for(int i = 0; i < PUBLIC_KEY_SIZE; i ++)
     enclaves[eid].pk_array[enclaves[eid].n_keypair][i] = pk_app[i];
   for(int i = 0; i < PRIVATE_KEY_SIZE; i ++)
     enclaves[eid].sk_array[enclaves[eid].n_keypair][i] = sk_app[i];
   
+  // The first keypair that is asked to be created is the Local Device Keys, that is inserted in the relative variables
   if(enclaves[eid].n_keypair == 0){
     my_memcpy(enclaves[eid].sk_ldev, sk_app, PRIVATE_KEY_SIZE );
     my_memcpy(enclaves[eid].pk_ldev, pk_app, PUBLIC_KEY_SIZE);
   }
 
   enclaves[eid].n_keypair +=1;
-
+  
   my_memcpy(pk, pk_app, PUBLIC_KEY_SIZE);
+
+  // The location in memoty of the private key of the keypair created is clean
+  my_memset(sk_app, 0, 64);
+
   return 0;
 }
 
@@ -855,10 +863,16 @@ unsigned long get_cert_chain(enclave_id eid, unsigned char** certs, int* sizes){
 
   //my_memcpy(certs[0], enclaves[eid].crt_local_att_der, enclaves[eid].crt_local_att_der_length);
   //sizes[0] = enclaves[eid].crt_local_att_der_length;
+  
+  // Providing the X509 cert in der format of the ECA and its length
   my_memcpy(certs[0], cert_sm, length_cert);
   sizes[0] = length_cert;
+
+  // Providing the X509 cert in der format of the Device Root Key and its length
   my_memcpy(certs[1], cert_root, length_cert_root);
   sizes[1] = length_cert_root;
+
+  // Providing the X509 cert in der format of the manufacturer key and its length
   my_memcpy(certs[2], cert_man, length_cert_man);
   sizes[2] = length_cert_man;
 
@@ -873,34 +887,38 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
   int pos = -1;
   
   switch (flag){
-    //sign of TCI|pk_lDev with the private key of the attestation keypair of the enclave
-    //the sign is placed in out_data. The attestation pk can be obtained calling the get_chain_cert method
+    // Sign of TCI|pk_lDev with the private key of the attestation keypair of the enclave.
+    // The sign is placed in out_data. The attestation pk can be obtained calling the get_chain_cert method
     case 1:
       sha3_init(&ctx_hash, 64);
       sha3_update(&ctx_hash, enclaves[eid].hash, 64);
       sha3_update(&ctx_hash, enclaves[eid].pk_ldev, 32);
       sha3_final(fin_hash, &ctx_hash);
 
-      //ed25519_sign(sign, fin_hash, 64, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
-      ed25519_sign(sign, fin_hash, 64, ECASM_pk, ECASM_priv);
+      ed25519_sign(sign, fin_hash, 64, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
+      //ed25519_sign(sign, fin_hash, 64, ECASM_pk, ECASM_priv);
       my_memcpy(out_data, sign, 64);
       *len_out_data = 64;
       return 0;
     break;
     case 2:
-      //sign of generic data with a specific private key
-      //the pk associated with the private key that has to be used is passed by the enclave
+      // Sign of generic data with a specific private key.
+      // The pk associated with the private key that has to be used is passed by the enclave
+
+      // Finding the private key associated to the public key passed
       for(int i = 0;  i < enclaves[eid].n_keypair; i ++)
-        if(my_memcmp(enclaves[eid].pk_array[i], pk, 64) == 0)
+        if(my_memcmp(enclaves[eid].pk_array[i], pk, 32) == 0)
           break;
       if (pos == -1)
         return -1;
 
+      // Making the signature
       sha3_init(&ctx_hash, 64);
       sha3_update(&ctx_hash, data, data_len);
       sha3_final(fin_hash, &ctx_hash);
-
       ed25519_sign(sign, fin_hash, 64, enclaves[eid].pk_array[pos], enclaves[eid].sk_array[pos]);
+
+      // Providing the signature
       my_memcpy(out_data, sign, 64);
       *len_out_data = 64;
       return 0;
