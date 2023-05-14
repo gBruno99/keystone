@@ -387,7 +387,8 @@ void sm_copy_key()
     }
     */
 
-  // From the CDI, the sm can be directly obtained the keys associated to the emebedded CA of his layer
+  // From the CDI and its measure inserted as extension in the ECA keys certificate,
+  // the sm can directly obtain the keys associated to the emebedded CA
   // that are used to signed the cert associated to the attestation key of the different enclaves 
   sha3_init(&ctx_hash, 64);
   sha3_update(&ctx_hash, CDI, 64);
