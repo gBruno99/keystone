@@ -907,8 +907,10 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
 
       // Finding the private key associated to the public key passed
       for(int i = 0;  i < enclaves[eid].n_keypair; i ++)
-        if(my_memcmp(enclaves[eid].pk_array[i], pk, 32) == 0)
+        if(my_memcmp(enclaves[eid].pk_array[i], pk, 32) == 0){
+          pos = i;
           break;
+        }
       if (pos == -1)
         return -1;
 
