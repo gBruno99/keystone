@@ -160,7 +160,7 @@ int bootloader()
   sha3_final(sanctum_sm_hash, &hash_ctx);
   
   // If the signature is modified, the verification goes wrong
-  //sanctum_sm_signature_test[0] = random_byte(0);
+  sanctum_sm_signature_test[0] = random_byte(0);
 
   // Verify the signature of the security monitor provided by the manufacturer
 
