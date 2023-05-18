@@ -1422,7 +1422,7 @@ int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
         //mbedtls_x509_crt_free(crt);
         return ret;
     }
-
+    //crt->version = 3;
     if (crt->version < 0 || crt->version > 2) {
         //mbedtls_x509_crt_free(crt);
         return MBEDTLS_ERR_X509_UNKNOWN_VERSION;

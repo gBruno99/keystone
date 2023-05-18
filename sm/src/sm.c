@@ -182,7 +182,8 @@ void sm_copy_key()
   }
   sbi_printf("\n-------------------------------------------------\n"); */
   
-  // The different certs are parsed if there are no problems
+  // The different certs are parsed if there are no 
+  
   if ((mbedtls_x509_crt_parse_der(&uff_cert_sm, cert_sm, length_cert)) != 0){
 
       // If there are some problems parsing a cert, all the start process is stopped
@@ -250,6 +251,7 @@ void sm_copy_key()
 
   // Check that all the certs in the chain are formally correct
   char* str_ret = validation(uff_cert_sm);
+  
   if(my_strlen(str_ret) != 0){
     sbi_printf("[SM] Problem with the sm certificate: %s \n\n", str_ret);
     sbi_hart_hang();
@@ -325,7 +327,7 @@ void sm_copy_key()
     sha3_init(&ctx_hash, 64);
     sha3_update(&ctx_hash, uff_cert_root.tbs.p, uff_cert_root.tbs.len);
     sha3_final(hash_for_verification, &ctx_hash);
-    //hash_for_verification[0] = 0x0;
+    hash_for_verification[0] = 0x0;
 
     if(ed25519_verify(uff_cert_root.sig.p, hash_for_verification, 64, uff_cert_man.pk.pk_ctx.pub_key) == 0){
       sbi_printf("[SM] Error verifying the signature of the root of trust certificate\n\n");
@@ -556,6 +558,7 @@ void sm_init(bool cold_boot)
 
 char* validation(mbedtls_x509_crt cert){
 
+  //return "Problem with the issuer of the certificate";
   if(cert.ne_issue_arr == 0)
     return "Problem with the issuer of the certificate";
   if(cert.ne_subje_arr == 0)
