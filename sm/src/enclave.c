@@ -925,12 +925,29 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
       *len_out_data = 64;
       return 0;
     break;
-    /*
+
     case 3:
+      // Sign of generic data with a specific private key.
+      // In this case the enclave provides directly the hash of the data that have to be signed
+      
+      // Finding the private key associated to the public key passed
+      for(int i = 0;  i < enclaves[eid].n_keypair; i ++)
+        if(my_memcmp(enclaves[eid].pk_array[i], pk, 32) == 0){
+          pos = i;
+          break;
+        }
+      if (pos == -1)
+        return -1;
+
+      ed25519_sign(sign, fin_hash, 64, enclaves[eid].pk_array[pos], enclaves[eid].sk_array[pos]);
+
+      // Providing the signature
+      my_memcpy(out_data, sign, 64);
+      *len_out_data = 64;
       return 0;
     break;
     
-    */default:
+    default:
       return -1;
     break;
   }
