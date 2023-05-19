@@ -12,6 +12,7 @@
 #include <sbi/riscv_asm.h>
 #include <sbi/riscv_locks.h>
 #include <sbi/sbi_console.h>
+#include <sbi/sbi_timer.h>
 #include "sha3/sha3.h"
 #include "sm.h"
 #include "ed25519/ed25519.h"
@@ -364,6 +365,9 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   enclave_id eid;
   unsigned long ret;
   int region, shared_region;
+  u64 init_value;
+  u64 final_value;
+  init_value = sbi_timer_value();
 
   /* Runtime parameters */
   if(!is_create_args_valid(&create_args))
@@ -503,7 +507,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   mbedtls_x509write_crt_set_serial_raw(&enclaves[eid].crt_local_att, serial, 3);
   
   // The algoithm used to do the hash for the signature is specified
-  mbedtls_x509write_crt_set_md_alg(&enclaves[eid].crt_local_att, MBEDTLS_MD_SHA512);
+  mbedtls_x509write_crt_set_md_alg(&enclaves[eid].crt_local_att, KEYSTONE_SHA3);
   
   // The validity of the crt is specified
   ret = mbedtls_x509write_crt_set_validity(&enclaves[eid].crt_local_att, "20220101000000", "20230101000000");
@@ -550,6 +554,9 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
     goto unlock;
 
   enclaves[eid].state = FRESH;
+  final_value = sbi_timer_value();
+  sbi_printf("Ticks needed for the creation of the enclave: %ld\n", final_value - init_value);
+
   /* EIDs are unsigned int in size, copy via simple copy */
   *eidptr = eid;
 
