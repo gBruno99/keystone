@@ -14,6 +14,7 @@
         "enclave.h": "c",
         "crypto.h": "c",
         "x509custom.h": "c",
-        "time.h": "c"
+        "time.h": "c",
+        "oid_custom.h": "c"
     }
 }
