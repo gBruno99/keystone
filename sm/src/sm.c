@@ -166,7 +166,6 @@ void sm_copy_key()
   length_cert = sanctum_length_cert;
   length_cert_root = sanctum_length_cert_root;
   length_cert_man = sanctum_length_cert_man;
-
   
   /*
   sbi_printf("ECASM_pk:\n");
@@ -247,6 +246,16 @@ void sm_copy_key()
   sbi_printf("length_cert_man:");
   sbi_printf("%d", length_cert_man);
   sbi_printf("\n-------------------------------------------------\n");
+  sbi_printf("cert man der format:\n");
+  for(int i = 0; i < length_cert_man; i ++){
+    sbi_printf("0x%02x,", cert_man[i]);
+  }
+  sbi_printf("\n-------------------------------------------------\n");
+
+    sbi_printf("length_cert:");
+  sbi_printf("%d", length_cert_man);
+  sbi_printf("\n-------------------------------------------------\n");
+
   sbi_printf("cert man der format:\n");
   for(int i = 0; i < length_cert_man; i ++){
     sbi_printf("0x%02x,", cert_man[i]);

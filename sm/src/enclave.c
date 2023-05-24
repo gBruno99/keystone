@@ -516,11 +516,15 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
     return 0;
   }
   const char oid_ext[] = {0xff, 0x20, 0xff};
+  const char oid_ext2[] = {0x55, 0x1d, 0x13};
+  unsigned char max_path[] = {0x0A};
   unsigned char app[64];
   my_memcpy(app, enclaves[eid].hash, 64);
 
   // The measure of the enclave is inserted as extension in the cert created for his local attestation keys
   mbedtls_x509write_crt_set_extension(&enclaves[eid].crt_local_att, oid_ext, 3, 0, app, 65);
+  mbedtls_x509write_crt_set_extension(&enclaves[eid].crt_local_att, oid_ext2, 3, 1, max_path, 2);
+
 
   unsigned char cert_der[1024];
   int effe_len_cert_der = 0;
