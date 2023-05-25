@@ -210,8 +210,8 @@ int bootloader()
     return 0;
   }
 
-  unsigned char oid_ext2[] = {0x55, 0x1d, 0x13};
-  unsigned char max_path[] = {0x0A};
+  //unsigned char oid_ext2[] = {0x55, 0x1d, 0x13};
+  //unsigned char max_path[] = {0x0A};
 
   // pk context used to embed the keys of the security monitor
   mbedtls_pk_context subj_key;
@@ -272,8 +272,10 @@ int bootloader()
   unsigned char oid_ext[] = {0xff, 0x20, 0xff};
 
   // Adding the measure of the security monitor like extension in its certificate
-  mbedtls_x509write_crt_set_extension(&cert, oid_ext2, 3, 1, max_path, 2);
-  mbedtls_x509write_crt_set_extension(&cert, oid_ext, 3, 0, sanctum_sm_hash, 65);
+  //mbedtls_x509write_crt_set_extension(&cert, oid_ext2, 3, 1, max_path, 2);
+  mbedtls_x509write_crt_set_extension(&cert, oid_ext, 3, 0, sanctum_sm_hash, 64);
+  mbedtls_x509write_crt_set_basic_constraints(&cert, 1, 10);
+
 
 
   // The structure mbedtls_x509write_cert is parsed to create a x509 cert in der format, signed with the private key of the issuer and written in memory
@@ -386,7 +388,8 @@ int bootloader()
   }  
 
   // Adding the measure of the security monitor like extension in its certificate
-  mbedtls_x509write_crt_set_extension(&cert_root, oid_ext2, 3, 1, max_path, 2);
+  //mbedtls_x509write_crt_set_extension(&cert_root, oid_ext2, 3, 1, max_path, 2);
+  mbedtls_x509write_crt_set_basic_constraints(&cert_root, 1, 10);
 
   
   unsigned char cert_der_root[1024];
@@ -413,9 +416,6 @@ int bootloader()
   memcpy(sanctum_cert_root, cert_real_root, effe_len_cert_der_root);
   /*****************************************************************************************************************/
   /*****************************************************************************************************************/
-
-
-
 
   //memcpy(test, sanctum_device_root_key_pub, 64);
 
