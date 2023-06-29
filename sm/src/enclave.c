@@ -835,6 +835,7 @@ unsigned long create_keypair(enclave_id eid, unsigned char* pk, int index){
   unsigned char sk_app[PRIVATE_KEY_SIZE];
 
   unsigned char app[65];
+  //cambiare nome indice con seed
 
   // The new keypair is obtained adding at the end of the CDI of the enclave an index, provided by the enclave itself
   my_memcpy(app, enclaves[eid].CDI, 64);
@@ -914,6 +915,7 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
       *len_out_data = 64;
       return 0;
     break;
+    /*
     case 2:
       // Sign of generic data with a specific private key.
       // The pk associated with the private key that has to be used is passed by the enclave
@@ -938,8 +940,8 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
       *len_out_data = 64;
       return 0;
     break;
-
-    case 3:
+  */
+    case 2:
       // Sign of generic data with a specific private key.
       // In this case the enclave provides directly the hash of the data that have to be signed
 
