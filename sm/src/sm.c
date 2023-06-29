@@ -596,7 +596,7 @@ void sm_init(bool cold_boot)
     sbi_hart_hang();
   }
 
-  sbi_printf("[SM] Keystone security monitor has been initialized!\n\n");
+  sbi_printf("[SM] Keystone SM has been initialized!\n\n");
   final_value = sbi_timer_value();
   //sbi_printf("Ticks needed to start the SM: %ld\n", final_value - init_value);
 
