@@ -246,16 +246,17 @@ void sm_copy_key()
     sbi_printf("%02x", cert_sm[i]);
   }
   sbi_printf("\n-------------------------------------------------\n");
-
+  
   sbi_printf("length_cert_root:");
   sbi_printf("%d", length_cert_root);
   sbi_printf("\n-------------------------------------------------\n");
+  
   sbi_printf("cert root der format:\n");
   for(int i = 0; i < length_cert_root; i ++){
     sbi_printf("0x%02x,", cert_root[i]);
   }
   sbi_printf("\n-------------------------------------------------\n");
-
+  
   sbi_printf("length_cert_man:");
   sbi_printf("%d", length_cert_man);
   sbi_printf("\n-------------------------------------------------\n");
