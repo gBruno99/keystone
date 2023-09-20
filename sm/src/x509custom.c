@@ -1,4 +1,4 @@
-#include "string.h"
+#include "myString.h"
 #include "x509custom.h"
 #include "ed25519/ed25519.h"
 #include "sha3/sha3.h"
@@ -1753,11 +1753,9 @@ void mbedtls_platform_zeroize(void *buf, size_t len)
         __msan_unpoison(buf, len);
 #endif
 #elif defined(__STDC_LIB_EXT1__)
-        memset_s(buf, len, 0, len);
 #elif defined(_WIN32)
         SecureZeroMemory(buf, len);
 #else
-        memset_func(buf, 0, len);
 #endif
     }
 }

@@ -16,7 +16,6 @@
 #include <sbi/sbi_hart.h>
 #include "sha3/sha3.h"
 #include <sbi/sbi_timer.h>
-
 #include "x509custom.h"
 #define DRAM_BASE 0x80000000
 
