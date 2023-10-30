@@ -44,6 +44,7 @@ extern int length_cert_root;
 extern byte cert_man[512];
 extern byte length_cert_man;
 sha3_ctx_t hash_ctx_to_use;
+mbedtls_x509write_cert crt;
 
 int print_hex_string(char* name, unsigned char* value, int size){
   sbi_printf("%s: 0x", name);
@@ -973,11 +974,12 @@ unsigned long get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }
 
-unsigned long create_keypair(enclave_id eid, unsigned char* pk, int seed_enc){
+unsigned long create_keypair(enclave_id eid, unsigned char* pk, int seed_enc, unsigned char* issued_crt, int *issued_crt_len){
 
   unsigned char seed[PRIVATE_KEY_SIZE];
   unsigned char pk_app[PUBLIC_KEY_SIZE];
   unsigned char sk_app[PRIVATE_KEY_SIZE];
+  int ret = 0;
 
   unsigned char app[65];
   //cambiare nome indice con seed
@@ -1022,6 +1024,144 @@ unsigned long create_keypair(enclave_id eid, unsigned char* pk, int seed_enc){
   // The location in memoty of the private key of the keypair created is clean
   my_memset(sk_app, 0, 64);
 
+  // Associated to the keys of the enclaves, a new 509 cert is created 
+  mbedtls_x509write_crt_init(&crt);
+
+  // Setting the name of the issuer of the cert
+  ret = mbedtls_x509write_crt_set_issuer_name_mod(&crt, "O=Security Monitor");
+  if (ret != 0)
+  {
+    #if SM_DICE_DEBUG
+    sbi_printf("[create_keypair - 2] DICE\r\n");
+    #endif
+    return ret;
+  }
+  
+  // Setting the name of the subject of the cert
+  ret = mbedtls_x509write_crt_set_subject_name_mod(&crt, enclaves[eid].n_keypair == 1 ? "CN=LDevID,O=Enclave":"CN=Keys,O=Enclave");
+  if (ret != 0)
+  {
+    #if SM_DICE_DEBUG
+    sbi_printf("[create_keypair - 3] DICE\r\n");
+    #endif
+    return ret;
+  }
+
+  // pk context used to embed the keys of the subject
+  mbedtls_pk_context subj_key;
+  mbedtls_pk_init(&subj_key);
+
+  // pk context used to embed the keys of the embedded CA
+  mbedtls_pk_context issu_key;
+  mbedtls_pk_init(&issu_key);
+
+  
+  // The keys of the embedded CA are used to sign the different certs associated to the keys of the different enclaves  
+  ret = mbedtls_pk_parse_public_key(&issu_key, ECASM_priv, 64, 1);
+  if (ret != 0)
+  {
+    #if SM_DICE_DEBUG
+    sbi_printf("[create_keypair - 4] DICE\r\n");
+    #endif
+    return ret;
+  }
+  ret = mbedtls_pk_parse_public_key(&issu_key, ECASM_pk, 32, 0);
+  if (ret != 0)
+  {
+    #if SM_DICE_DEBUG
+    sbi_printf("[create_keypair - 5] DICE\r\n");
+    #endif
+    return ret;
+  }
+
+  // Parsing the public key of the enclave that will be inserted in its certificate 
+  ret = mbedtls_pk_parse_public_key(&subj_key, pk_app, 32, 0);
+  if (ret != 0)
+  {
+    #if SM_DICE_DEBUG
+    sbi_printf("[create_keypair - 6] DICE\r\n");
+    #endif
+    return ret;
+  }
+
+  // Variable  used to specify the serial of the cert
+  unsigned char serial[] = {0x0, 0x0, 0x1};
+  serial[1] = eid;
+  
+  // The public key of the enclave is inserted in the structure
+  mbedtls_x509write_crt_set_subject_key(&crt, &subj_key);
+
+  // The private key of the embedded CA is used later to sign the cert
+  mbedtls_x509write_crt_set_issuer_key(&crt, &issu_key);
+  
+  // The serial of the cert is setted
+  mbedtls_x509write_crt_set_serial_raw(&crt, serial, 3);
+  
+  // The algoithm used to do the hash for the signature is specified
+  mbedtls_x509write_crt_set_md_alg(&crt, KEYSTONE_SHA3);
+  
+  // The validity of the crt is specified
+  ret = mbedtls_x509write_crt_set_validity(&crt, "20230101000000", "20240101000000");
+  if (ret != 0)
+  {
+    #if SM_DICE_DEBUG
+    sbi_printf("[create_keypair - 7] DICE\r\n");
+    #endif
+    return ret;
+  }
+  const char oid_ext[] = {0xff, 0x20, 0xff};
+  // unsigned char tci[64] = {0};
+  //const char oid_ext2[] = {0x55, 0x1d, 0x13};
+  //unsigned char max_path[] = {0x0A};
+  my_memcpy(app, enclaves[eid].hash, 64);
+  #if SM_DICE_DEBUG
+  print_hex_string("TCI", enclaves[eid].hash, 64);
+  print_hex_string("app 1", app, 64);
+  #endif
+
+  // The measure of the enclave is inserted as extension in the cert created for his local attestation keys
+  mbedtls_x509write_crt_set_extension(&crt, oid_ext, 3, 0, app, 64);
+  #if SM_DICE_DEBUG
+  print_hex_string("crt.tci 1", crt.extens_arr[0].val.p_arr, 64);
+  #endif
+  //mbedtls_x509write_crt_set_extension(&crt, oid_ext2, 3, 1, max_path, 2);
+  //mbedtls_x509write_crt_set_basic_constraints(&crt, 1, 10);
+
+  unsigned char cert_der[1024];
+  int effe_len_cert_der = 0;
+  size_t len_cert_der_tot = 1024;
+  ret = mbedtls_x509write_crt_der(&crt, cert_der, len_cert_der_tot, NULL, NULL);
+  #if SM_DICE_DEBUG
+  print_hex_string("crt.tci 2", crt.extens_arr[0].val.p_arr, 64);
+  #endif
+  if (ret != 0)
+  {
+    #if SM_DICE_DEBUG
+    sbi_printf("[create_keypair - err 1] ret: %lu\r\n", ret);
+    #endif
+    effe_len_cert_der = ret;
+    ret = 0;
+  } else {
+    return -1;
+  }
+  unsigned char *cert_real = cert_der;
+  int dif  = 0;
+  dif= 1024-effe_len_cert_der;
+  cert_real += dif;
+
+  // The der format of the cert and its length are stored in the specific variables received from the caller
+  // issued_crt_len[0] = 5;
+  // unsigned char test[] = {0x00, 0x01, 0x02, 0x03, 0x04};
+  // my_memcpy(issued_crt, test, 5);
+  #if SM_DICE_DEBUG
+  print_hex_string("app 2", app, 64);
+  #endif
+  issued_crt_len[0] = effe_len_cert_der;
+  my_memcpy(issued_crt, cert_real, effe_len_cert_der);
+  #if SM_DICE_DEBUG
+  print_hex_string("SM - create keypair - cert_LDevID", cert_real, effe_len_cert_der);
+  #endif
+
   return 0;
 }
 
@@ -1049,6 +1189,13 @@ unsigned long get_cert_chain(enclave_id eid, unsigned char** certs, int* sizes){
   print_mbedtls_x509_cert("SM - cert_man", cert_man_p);
   #endif
 
+  #if SM_DICE_DEBUG
+  print_hex_string("SM - Get certs - cert_LAK", enclaves[eid].crt_local_att_der,  enclaves[eid].crt_local_att_der_length);
+  #endif
+  // Providing the X509 cert in der format of the LAK and its length
+  my_memcpy(certs[0], enclaves[eid].crt_local_att_der, enclaves[eid].crt_local_att_der_length);
+  sizes[0] = enclaves[eid].crt_local_att_der_length;
+
   //my_memcpy(certs[0], enclaves[eid].crt_local_att_der, enclaves[eid].crt_local_att_der_length);
   //sizes[0] = enclaves[eid].crt_local_att_der_length;
   #if SM_DICE_DEBUG
@@ -1056,22 +1203,15 @@ unsigned long get_cert_chain(enclave_id eid, unsigned char** certs, int* sizes){
   #endif
 
   // Providing the X509 cert in der format of the ECA and its length
-  my_memcpy(certs[0], cert_sm, length_cert);
-  sizes[0] = length_cert;
+  my_memcpy(certs[1], cert_sm, length_cert);
+  sizes[1] = length_cert;
 
   #if SM_DICE_DEBUG
   print_hex_string("SM - Get certs - cert_root", cert_root, length_cert_root);
   #endif
   // Providing the X509 cert in der format of the Device Root Key and its length
-  my_memcpy(certs[1], cert_root, length_cert_root);
-  sizes[1] = length_cert_root;
-
-  #if SM_DICE_DEBUG
-  print_hex_string("SM - Get certs - cert_man", cert_man, length_cert_man);
-  #endif
-  // Providing the X509 cert in der format of the manufacturer key and its length
-  my_memcpy(certs[2], cert_man, length_cert_man);
-  sizes[2] = length_cert_man;
+  my_memcpy(certs[2], cert_root, length_cert_root);
+  sizes[2] = length_cert_root;
 
   return 0;
 }
@@ -1103,7 +1243,7 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
       #endif
 
       //ed25519_sign(sign, fin_hash, 64, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
-      ed25519_sign(sign, fin_hash, 64, ECASM_pk, ECASM_priv);
+      ed25519_sign(sign, fin_hash, 64, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
       #if SM_DICE_DEBUG
       print_hex_string("SM - Do crypto op", sign, 64);
       #endif

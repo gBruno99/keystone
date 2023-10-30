@@ -50,7 +50,7 @@ sbi_attest_enclave(void* report, void* buf, uintptr_t len);
 uintptr_t
 sbi_get_sealing_key(uintptr_t key_struct, uintptr_t key_ident, uintptr_t len);
 uintptr_t
-sbi_create_keypair(uintptr_t pk, uintptr_t index);
+sbi_create_keypair(uintptr_t pk, uintptr_t index, uintptr_t issued_crt, uintptr_t issued_crt_len);
 uintptr_t
 sbi_get_cert_chain(uintptr_t certs, uintptr_t sizes);
 uintptr_t

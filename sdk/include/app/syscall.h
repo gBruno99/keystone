@@ -79,7 +79,7 @@ get_sealing_key(
     void* key_ident, size_t key_ident_size);
 
 int
-create_keypair(void* pk, unsigned long index);
+create_keypair(void* pk, unsigned long index, void* issued_crt, void* issued_crt_len);
 
 int
 get_cert_chain(void* cert_1, void* cert_2, void* cert_3, void* size_1, void* size_2, void* size_3);

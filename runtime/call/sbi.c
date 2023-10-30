@@ -97,8 +97,8 @@ sbi_get_sealing_key(uintptr_t key_struct, uintptr_t key_ident, uintptr_t len) {
 }
 
 uintptr_t
-sbi_create_keypair(uintptr_t pk, uintptr_t index){
-  return SBI_CUSTOM_CALL(SBI_EXT_EXPERIMENTAL_KEYSTONE_ENCLAVE, SBI_SM_CREATE_KEYPAIR, pk, index, 0, 0, 0, 0);
+sbi_create_keypair(uintptr_t pk, uintptr_t index, uintptr_t issued_crt, uintptr_t issued_crt_len){
+  return SBI_CUSTOM_CALL(SBI_EXT_EXPERIMENTAL_KEYSTONE_ENCLAVE, SBI_SM_CREATE_KEYPAIR, pk, index, issued_crt, issued_crt_len, 0, 0);
 }
 
 uintptr_t

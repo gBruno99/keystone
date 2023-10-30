@@ -35,8 +35,8 @@ get_sealing_key(
 }
 
 int
-create_keypair(void* pk, unsigned long index){
-  return CUSTOM_SYSCALL(SYSCALL_CREATE_KEYPAIR, pk, index, 0, 0, 0, 0);
+create_keypair(void* pk, unsigned long index, void* issued_crt, void* issued_crt_len){
+  return CUSTOM_SYSCALL(SYSCALL_CREATE_KEYPAIR, pk, index, issued_crt, issued_crt_len, 0, 0);
 }
 
 int

@@ -215,12 +215,16 @@ void handle_syscall(struct encl_ctx* ctx)
   case(RUNTIME_SYSCALL_CREATE_KEYPAIR):
     buffer_1_pa = kernel_va_to_pa(rt_copy_buffer_1);
 
-    ret = sbi_create_keypair(buffer_1_pa, arg1);
+    ret = sbi_create_keypair(buffer_1_pa, arg1, kernel_va_to_pa(rt_copy_buffer_2), kernel_va_to_pa(rt_copy_buffer_3));
     if (!ret) {
       copy_to_user((void*)arg0, (void*)rt_copy_buffer_1, PUBLIC_KEY_SIZE);
+      copy_to_user((void*)arg2, (void*)rt_copy_buffer_2, *((int*)rt_copy_buffer_3));
+      copy_to_user((void*)arg3, (void*)rt_copy_buffer_3, sizeof(int));
     }
 
     memset(rt_copy_buffer_1, 0x00, sizeof(rt_copy_buffer_1));
+    memset(rt_copy_buffer_2, 0x00, sizeof(rt_copy_buffer_2));
+    memset(rt_copy_buffer_3, 0x00, sizeof(rt_copy_buffer_3));
     break;
 
   case(RUNTIME_SYSCALL_GET_CHAIN):
