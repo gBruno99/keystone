@@ -456,6 +456,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   int region, shared_region;
   u64 init_value;
   u64 final_value;
+  char crt_subject[64] = {0}; 
   init_value = sbi_timer_value();
 
   /* Runtime parameters */
@@ -485,6 +486,9 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
     #endif
     goto error;
   }
+
+  my_strncpy(crt_subject, "CN=LAK,O=Enclave-", 17);
+  my_strncpy(crt_subject+17, (char*) create_args.uuid, 36);
 
   // create a PMP region bound to the enclave
   ret = SBI_ERR_SM_ENCLAVE_PMP_FAILURE;
@@ -530,6 +534,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   enclaves[eid].n_thread = 0;
   enclaves[eid].params = params;
   enclaves[eid].pa_params = pa_params;
+  my_strncpy((char*) enclaves[eid].uuid, (char*) create_args.uuid, 36);
 
   /* Init enclave state (regs etc) */
   clean_state(&enclaves[eid].threads[0]);
@@ -576,7 +581,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   }
   
   // Setting the name of the subject of the cert
-  ret = mbedtls_x509write_crt_set_subject_name_mod(&enclaves[eid].crt_local_att, "O=Enclave" );
+  ret = mbedtls_x509write_crt_set_subject_name_mod(&enclaves[eid].crt_local_att, crt_subject );
   if (ret != 0)
   {
     #if SM_DICE_DEBUG
@@ -979,10 +984,19 @@ unsigned long create_keypair(enclave_id eid, unsigned char* pk, int seed_enc, un
   unsigned char seed[PRIVATE_KEY_SIZE];
   unsigned char pk_app[PUBLIC_KEY_SIZE];
   unsigned char sk_app[PRIVATE_KEY_SIZE];
+  char crt_subject[64] = {0};
   int ret = 0;
 
   unsigned char app[65];
   //cambiare nome indice con seed
+
+  if(enclaves[eid].n_keypair == 0){
+    my_strncpy(crt_subject, "CN=LDevID,O=Enclave-", 20);
+    my_strncpy(crt_subject+20, (char*) enclaves[eid].uuid, 36);
+  } else {
+    my_strncpy(crt_subject, "CN=Keys,O=Enclave-", 18);
+    my_strncpy(crt_subject+18, (char*) enclaves[eid].uuid, 36);
+  }
 
   // The new keypair is obtained adding at the end of the CDI of the enclave an index, provided by the enclave itself
   my_memcpy(app, enclaves[eid].CDI, 64);
@@ -1038,7 +1052,7 @@ unsigned long create_keypair(enclave_id eid, unsigned char* pk, int seed_enc, un
   }
   
   // Setting the name of the subject of the cert
-  ret = mbedtls_x509write_crt_set_subject_name_mod(&crt, enclaves[eid].n_keypair == 1 ? "CN=LDevID,O=Enclave":"CN=Keys,O=Enclave");
+  ret = mbedtls_x509write_crt_set_subject_name_mod(&crt, crt_subject);
   if (ret != 0)
   {
     #if SM_DICE_DEBUG

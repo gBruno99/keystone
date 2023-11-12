@@ -342,6 +342,8 @@ Enclave::init(
     ERROR("failed to load untrusted");
   }
 
+  strncpy((char*) uuid, (char*) _params.getUUID(), 36);
+
   struct runtime_params_t runtimeParams;
   runtimeParams.runtime_entry =
       reinterpret_cast<uintptr_t>(runtimeFile->getEntryPoint());
@@ -361,7 +363,7 @@ Enclave::init(
 
   if (pDevice->finalize(
           pMemory->getRuntimePhysAddr(), pMemory->getEappPhysAddr(),
-          pMemory->getFreePhysAddr(), runtimeParams) != Error::Success) {
+          pMemory->getFreePhysAddr(), uuid, runtimeParams) != Error::Success) {
     destroy();
     return Error::DeviceError;
   }

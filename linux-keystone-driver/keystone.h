@@ -58,6 +58,7 @@ struct enclave
   struct utm* utm;
   struct epm* epm;
   bool is_init;
+  unsigned char uuid[36];
 };
 
 

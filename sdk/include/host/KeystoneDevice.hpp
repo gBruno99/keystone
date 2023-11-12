@@ -39,7 +39,7 @@ class KeystoneDevice {
   virtual Error create(uint64_t minPages);
   virtual uintptr_t initUTM(size_t size);
   virtual Error finalize(
-      uintptr_t runtimePhysAddr, uintptr_t eappPhysAddr, uintptr_t freePhysAddr,
+      uintptr_t runtimePhysAddr, uintptr_t eappPhysAddr, uintptr_t freePhysAddr, uint8_t uuid[],
       struct runtime_params_t params);
   virtual Error destroy();
   virtual Error run(uintptr_t* ret);

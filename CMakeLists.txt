@@ -379,6 +379,16 @@ configure_file(
   ${scripts}/test-qemu.sh
   @ONLY)
 
+configure_file(
+  ${CMAKE_SOURCE_DIR}/scripts/run-qemu-Alice.sh.in
+  ${scripts}/run-qemu-Alice.sh
+  @ONLY)
+
+configure_file(
+  ${CMAKE_SOURCE_DIR}/scripts/run-qemu-Bob.sh.in
+  ${scripts}/run-qemu-Bob.sh
+  @ONLY)
+
 add_custom_command(OUTPUT ${scripts}/travis.sh
   DEPENDS ${CMAKE_SOURCE_DIR}/scripts ${scripts}
   COMMAND cp ${CMAKE_SOURCE_DIR}/scripts/travis.sh ${scripts})

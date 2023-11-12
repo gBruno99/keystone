@@ -74,6 +74,8 @@ struct enclave
   byte hash[MDSIZE];
   byte sign[SIGNATURE_SIZE];
 
+  byte uuid[36];
+
   byte CDI[64];
   byte local_att_pub[32];
   byte local_att_priv[64];

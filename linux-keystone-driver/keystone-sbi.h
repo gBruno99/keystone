@@ -31,6 +31,7 @@ struct keystone_sbi_create_t
   uintptr_t runtime_paddr;
   uintptr_t user_paddr;
   uintptr_t free_paddr;
+  unsigned char uuid[36];
 
   // Parameters
   struct runtime_params_t params;

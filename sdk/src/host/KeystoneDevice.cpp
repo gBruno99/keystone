@@ -40,7 +40,7 @@ KeystoneDevice::initUTM(size_t size) {
 
 Error
 KeystoneDevice::finalize(
-    uintptr_t runtimePhysAddr, uintptr_t eappPhysAddr, uintptr_t freePhysAddr,
+    uintptr_t runtimePhysAddr, uintptr_t eappPhysAddr, uintptr_t freePhysAddr, uint8_t uuid[],
     struct runtime_params_t params) {
   struct keystone_ioctl_create_enclave encl;
   encl.eid           = eid;
@@ -48,6 +48,7 @@ KeystoneDevice::finalize(
   encl.user_paddr    = eappPhysAddr;
   encl.free_paddr    = freePhysAddr;
   encl.params        = params;
+  strncpy((char*)encl.uuid, (char*)uuid, 36);
 
   if (ioctl(fd, KEYSTONE_IOC_FINALIZE_ENCLAVE, &encl)) {
     perror("ioctl error");

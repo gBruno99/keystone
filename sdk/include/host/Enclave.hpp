@@ -26,6 +26,8 @@ extern "C" {
 #include "Memory.hpp"
 #include "Params.hpp"
 
+#define UUIDSIZE 36
+
 namespace Keystone {
 
 typedef std::function<void(void*)> OcallFunc;
@@ -38,6 +40,7 @@ class Enclave {
   Memory* pMemory;
   KeystoneDevice* pDevice;
   char hash[MDSIZE];
+  unsigned char uuid[UUIDSIZE];
   hash_ctx_t hash_ctx;
   uintptr_t runtime_stk_sz;
   void* shared_buffer;

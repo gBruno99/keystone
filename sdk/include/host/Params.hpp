@@ -46,11 +46,17 @@ class Params {
     untrusted_size = size;
   }
   void setFreeMemSize(uint64_t size) { freemem_size = size; }
+  void setUUID(uint8_t _uuid[]) {
+    for(int i = 0; i < 36; i++){
+      uuid[i] = _uuid[i];
+    }
+  }
   bool isSimulated() { return simulated; }
   uintptr_t getUntrustedMem() { return untrusted; }
   uintptr_t getUntrustedSize() { return untrusted_size; }
   uintptr_t getUntrustedEnd() { return untrusted + untrusted_size; }
   uintptr_t getFreeMemSize() { return freemem_size; }
+  uint8_t* getUUID() {return uuid; }
 
  private:
   bool simulated;
@@ -59,6 +65,7 @@ class Params {
   uint64_t untrusted;
   uint64_t untrusted_size;
   uint64_t freemem_size;
+  uint8_t uuid[36];
 };
 
 }  // namespace Keystone
