@@ -8,11 +8,14 @@
 #include <sbi/sbi_scratch.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_ecall.h>
+#include <sbi/sbi_timer.h>
 #include "sm-sbi-opensbi.h"
 #include "pmp.h"
 #include "sm-sbi.h"
 #include "sm.h"
 #include "cpu.h"
+
+#define PRINT_TICKS 0
 
 static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long funcid,
                      const struct sbi_trap_regs *regs,
@@ -20,6 +23,10 @@ static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long
                      struct sbi_trap_info *out_trap)
 {
   uintptr_t retval;
+  #if PRINT_TICKS
+  unsigned long t_start, t_end, t_diff;
+  t_start = sbi_timer_value();
+  #endif
 
   if (funcid <= FID_RANGE_DEPRECATED) { return SBI_ERR_SM_DEPRECATED; }
   else if (funcid <= FID_RANGE_HOST)
@@ -82,6 +89,11 @@ static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long
       retval = SBI_ERR_SM_NOT_IMPLEMENTED;
       break;
   }
+  #if PRINT_TICKS
+  t_end = sbi_timer_value();
+  t_diff = t_end-t_start;
+  sbi_printf("[SM] Ticks for %lu: %lu\r\n", funcid, t_diff);
+  #endif
 
   return retval;
 
