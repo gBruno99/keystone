@@ -20,14 +20,16 @@ while [ "$1" != "" ]; do
     shift;
 done;
 
-/home/giacomo/Documents/keystone/qemu/build/riscv64-softmmu/qemu-system-riscv64 \
+TEST_DIR=$(pwd)
+
+@qemu_system@ \
  $DEBUG \
  -m 2G \
  -nographic \
- -machine virt,rom=/home/giacomo/Documents/keystone/tests_trusted_channel/eapp_corrupted/bootrom.bin \
- -bios /home/giacomo/Documents/keystone/tests_trusted_channel/eapp_corrupted/fw_jump.elf \
- -kernel /home/giacomo/Documents/keystone/tests_trusted_channel/eapp_corrupted/Image \
-       -append "console=ttyS0 ro root=/dev/vda"       -drive file=/home/giacomo/Documents/keystone/tests_trusted_channel/eapp_corrupted/rootfs.ext2,format=raw,id=hd0       -device virtio-blk-device,drive=hd0    \
+ -machine virt,rom=$TEST_DIR/bootrom.bin \
+ -bios $TEST_DIR/fw_jump.elf \
+ -kernel $TEST_DIR/Image \
+       -append "console=ttyS0 ro root=/dev/vda"       -drive file=$TEST_DIR/rootfs.ext2,format=raw,id=hd0       -device virtio-blk-device,drive=hd0    \
  -netdev user,id=net0,net=192.168.100.1/24,dhcpstart=192.168.100.128,hostfwd=tcp::${HOST_PORT}-:22 \
  -device virtio-net-device,netdev=net0 \
  -device virtio-rng-pci \

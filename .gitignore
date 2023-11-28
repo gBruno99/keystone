@@ -5,3 +5,8 @@ build/
 riscv/
 riscv64/
 riscv32/
+source.sh
+tests_trusted_channel/csr_replay/run-qemu.sh
+tests_trusted_channel/eapp_corrupted/run-qemu.sh
+tests_trusted_channel/sm_corrupted/run-qemu.sh
+tests_trusted_channel/wrong_key/run-qemu.sh

@@ -389,6 +389,26 @@ configure_file(
   ${scripts}/run-qemu-Bob.sh
   @ONLY)
 
+configure_file(
+  ${CMAKE_SOURCE_DIR}/tests_trusted_channel/csr_replay/run-qemu.sh.in
+  ${CMAKE_SOURCE_DIR}/tests_trusted_channel/csr_replay/run-qemu.sh
+  @ONLY)
+
+configure_file(
+  ${CMAKE_SOURCE_DIR}/tests_trusted_channel/eapp_corrupted/run-qemu.sh.in
+  ${CMAKE_SOURCE_DIR}/tests_trusted_channel/eapp_corrupted/run-qemu.sh
+  @ONLY)
+
+configure_file(
+  ${CMAKE_SOURCE_DIR}/tests_trusted_channel/sm_corrupted/run-qemu.sh.in
+  ${CMAKE_SOURCE_DIR}/tests_trusted_channel/sm_corrupted/run-qemu.sh
+  @ONLY)
+
+configure_file(
+  ${CMAKE_SOURCE_DIR}/tests_trusted_channel/wrong_key/run-qemu.sh.in
+  ${CMAKE_SOURCE_DIR}/tests_trusted_channel/wrong_key/run-qemu.sh
+  @ONLY)
+
 add_custom_command(OUTPUT ${scripts}/travis.sh
   DEPENDS ${CMAKE_SOURCE_DIR}/scripts ${scripts}
   COMMAND cp ${CMAKE_SOURCE_DIR}/scripts/travis.sh ${scripts})
